@@ -1,0 +1,1774 @@
+from flask import Flask, request, redirect, url_for, render_template_string
+import sqlite3
+from datetime import date
+
+app = Flask(__name__)
+
+DB_NAME = "kitaphana.db"
+
+
+# =========================================================
+# ДЕРЕКҚОРҒА ҚОСЫЛУ
+# =========================================================
+
+def get_db():
+    db = sqlite3.connect(DB_NAME)
+    db.row_factory = sqlite3.Row
+    return db
+
+
+# =========================================================
+# ДЕРЕКҚОРДЫ ҚҰРУ
+# =========================================================
+
+def init_db():
+
+    db = get_db()
+
+    # ОҚЫРМАНДАР
+    db.execute("""
+        CREATE TABLE IF NOT EXISTS okuyandar (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            aty TEXT NOT NULL,
+            synyp TEXT,
+            turi TEXT
+        )
+    """)
+
+    # КІТАПТАР
+    db.execute("""
+        CREATE TABLE IF NOT EXISTS kitaptar (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            kitap_id TEXT NOT NULL UNIQUE,
+            ataui TEXT NOT NULL,
+            avtor TEXT,
+            sanat TEXT,
+            jalpy_sany INTEGER DEFAULT 0
+        )
+    """)
+
+    # КІТАП БЕРУ
+    db.execute("""
+        CREATE TABLE IF NOT EXISTS kitap_beru (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            kuni TEXT NOT NULL,
+            okuyman_id INTEGER NOT NULL,
+            kitap_id INTEGER NOT NULL,
+            berildi TEXT DEFAULT 'Иә',
+            kaitaryldy TEXT DEFAULT 'Жоқ',
+            kaitaru_kuni TEXT,
+            merzim TEXT
+        )
+    """)
+
+    db.commit()
+    db.close()
+
+
+# =========================================================
+# БАСТЫ БЕТ
+# =========================================================
+
+@app.route("/")
+def home():
+
+    db = get_db()
+
+    total_books = db.execute("""
+        SELECT COALESCE(SUM(jalpy_sany), 0)
+        FROM kitaptar
+    """).fetchone()[0]
+
+    total_readers = db.execute("""
+        SELECT COUNT(*)
+        FROM okuyandar
+    """).fetchone()[0]
+
+    currently_out = db.execute("""
+        SELECT COUNT(*)
+        FROM kitap_beru
+        WHERE berildi = 'Иә'
+          AND kaitaryldy = 'Жоқ'
+    """).fetchone()[0]
+
+    overdue = db.execute("""
+        SELECT COUNT(*)
+        FROM kitap_beru
+        WHERE berildi = 'Иә'
+          AND kaitaryldy = 'Жоқ'
+          AND merzim < date('now', 'localtime')
+    """).fetchone()[0]
+
+    db.close()
+
+    return render_template_string("""
+    <!DOCTYPE html>
+
+    <html lang="kk">
+
+    <head>
+
+        <meta charset="UTF-8">
+
+        <meta name="viewport"
+              content="width=device-width, initial-scale=1.0">
+
+        <title>Кітапхана басқару жүйесі</title>
+
+        <style>
+
+            body {
+                font-family: Arial, sans-serif;
+                background: #f2f4f7;
+                margin: 0;
+                padding: 20px;
+            }
+
+            h1 {
+                text-align: center;
+                margin-bottom: 30px;
+            }
+
+            .cards {
+                max-width: 1000px;
+                margin: auto;
+
+                display: grid;
+
+                grid-template-columns:
+                    repeat(auto-fit, minmax(200px, 1fr));
+
+                gap: 20px;
+            }
+
+            .card {
+                background: white;
+
+                padding: 25px;
+
+                border-radius: 15px;
+
+                text-align: center;
+
+                box-shadow:
+                    0 3px 10px rgba(0,0,0,0.12);
+            }
+
+            .card-title {
+                font-size: 18px;
+            }
+
+            .number {
+                font-size: 42px;
+
+                font-weight: bold;
+
+                margin-top: 10px;
+            }
+
+            .menu {
+                max-width: 1000px;
+
+                margin: 35px auto;
+
+                display: grid;
+
+                grid-template-columns:
+                    repeat(auto-fit, minmax(220px, 1fr));
+
+                gap: 15px;
+            }
+
+            .button {
+                display: block;
+
+                padding: 18px;
+
+                background: #ffffff;
+
+                border-radius: 12px;
+
+                text-align: center;
+
+                text-decoration: none;
+
+                color: #222;
+
+                font-size: 18px;
+
+                font-weight: bold;
+
+                box-shadow:
+                    0 2px 8px rgba(0,0,0,0.12);
+            }
+
+            .button:hover {
+                background: #e9eef5;
+            }
+
+            .danger {
+                color: #cc0000;
+            }
+
+        </style>
+
+    </head>
+
+    <body>
+
+        <h1>КІТАПХАНА БАСҚАРУ ЖҮЙЕСІ</h1>
+
+
+        <div class="cards">
+
+            <div class="card">
+
+                <div class="card-title">
+                    Барлық кітап
+                </div>
+
+                <div class="number">
+                    {{ total_books }}
+                </div>
+
+            </div>
+
+
+            <div class="card">
+
+                <div class="card-title">
+                    Оқырмандар
+                </div>
+
+                <div class="number">
+                    {{ total_readers }}
+                </div>
+
+            </div>
+
+
+            <div class="card">
+
+                <div class="card-title">
+                    Қазір берілген
+                </div>
+
+                <div class="number">
+                    {{ currently_out }}
+                </div>
+
+            </div>
+
+
+            <div class="card">
+
+                <div class="card-title">
+                    Мерзімі өткен
+                </div>
+
+                <div class="number danger">
+                    {{ overdue }}
+                </div>
+
+            </div>
+
+        </div>
+
+
+        <div class="menu">
+
+            <a class="button"
+               href="/readers">
+                ОҚЫРМАНДАР
+            </a>
+
+
+            <a class="button"
+               href="/books">
+                КІТАПТАР
+            </a>
+
+
+            <a class="button"
+               href="/loans">
+                КІТАП БЕРУ
+            </a>
+
+
+            <a class="button"
+               href="/report">
+                ЕСЕП
+            </a>
+
+        </div>
+
+
+    </body>
+
+    </html>
+
+    """,
+    total_books=total_books,
+    total_readers=total_readers,
+    currently_out=currently_out,
+    overdue=overdue
+    )
+
+
+# =========================================================
+# ОҚЫРМАНДАР
+# =========================================================
+
+@app.route("/readers")
+def readers():
+
+    db = get_db()
+
+    readers = db.execute("""
+        SELECT *
+        FROM okuyandar
+        ORDER BY id DESC
+    """).fetchall()
+
+    db.close()
+
+    return render_template_string("""
+    <!DOCTYPE html>
+
+    <html lang="kk">
+
+    <head>
+
+        <meta charset="UTF-8">
+
+        <title>Оқырмандар</title>
+
+        <style>
+
+            body {
+                font-family: Arial;
+                padding: 20px;
+                background: #f2f2f2;
+            }
+
+            table {
+                width: 100%;
+                background: white;
+                border-collapse: collapse;
+            }
+
+            th, td {
+                padding: 10px;
+                border: 1px solid #ccc;
+                text-align: center;
+            }
+
+            th {
+                background: #eeeeee;
+            }
+
+            .add {
+                display: inline-block;
+                padding: 12px 18px;
+                background: white;
+                text-decoration: none;
+                color: black;
+                border-radius: 8px;
+                margin-bottom: 20px;
+            }
+
+        </style>
+
+    </head>
+
+    <body>
+
+        <h1>ОҚЫРМАНДАР</h1>
+
+        <a class="add"
+           href="/readers/add">
+            + ОҚЫРМАН ҚОСУ
+        </a>
+
+        <table>
+
+            <tr>
+
+                <th>ID</th>
+                <th>Аты-жөні</th>
+                <th>Сыныбы</th>
+                <th>Түрі</th>
+
+            </tr>
+
+            {% for reader in readers %}
+
+            <tr>
+
+                <td>
+                    {{ reader["id"] }}
+                </td>
+
+                <td>
+                    {{ reader["aty"] }}
+                </td>
+
+                <td>
+                    {{ reader["synyp"] }}
+                </td>
+
+                <td>
+                    {{ reader["turi"] }}
+                </td>
+
+            </tr>
+
+            {% endfor %}
+
+        </table>
+
+        <br>
+
+        <a href="/">
+            ← Басты бет
+        </a>
+
+    </body>
+
+    </html>
+    """, readers=readers)
+
+
+# =========================================================
+# ОҚЫРМАН ҚОСУ
+# =========================================================
+
+@app.route("/readers/add", methods=["GET", "POST"])
+def add_reader():
+
+    if request.method == "POST":
+
+        aty = request.form["aty"]
+        synyp = request.form["synyp"]
+        turi = request.form["turi"]
+
+        db = get_db()
+
+        db.execute("""
+            INSERT INTO okuyandar
+            (
+                aty,
+                synyp,
+                turi
+            )
+            VALUES (?, ?, ?)
+        """, (
+            aty,
+            synyp,
+            turi
+        ))
+
+        db.commit()
+        db.close()
+
+        return redirect(url_for("readers"))
+
+
+    return render_template_string("""
+    <!DOCTYPE html>
+
+    <html lang="kk">
+
+    <head>
+
+        <meta charset="UTF-8">
+
+        <title>Оқырман қосу</title>
+
+    </head>
+
+    <body>
+
+        <h1>ОҚЫРМАН ҚОСУ</h1>
+
+        <form method="POST">
+
+            <label>
+                Аты-жөні:
+            </label>
+
+            <br>
+
+            <input
+                type="text"
+                name="aty"
+                required
+            >
+
+            <br><br>
+
+
+            <label>
+                Сыныбы:
+            </label>
+
+            <br>
+
+            <input
+                type="text"
+                name="synyp"
+            >
+
+            <br><br>
+
+
+            <label>
+                Түрі:
+            </label>
+
+            <br>
+
+            <select name="turi">
+
+                <option value="Оқушы">
+                    Оқушы
+                </option>
+
+                <option value="Мұғалім">
+                    Мұғалім
+                </option>
+
+            </select>
+
+            <br><br>
+
+            <button type="submit">
+                САҚТАУ
+            </button>
+
+        </form>
+
+        <br>
+
+        <a href="/readers">
+            ← Оқырмандарға қайту
+        </a>
+
+    </body>
+
+    </html>
+    """)
+
+
+# =========================================================
+# КІТАПТАР
+# =========================================================
+
+@app.route("/books")
+def books():
+
+    db = get_db()
+
+    books = db.execute("""
+        SELECT
+            kitaptar.*,
+
+            (
+                SELECT COUNT(*)
+                FROM kitap_beru
+                WHERE kitap_beru.kitap_id = kitaptar.id
+                  AND kitap_beru.kaitaryldy = 'Жоқ'
+            ) AS berilgen_sany,
+
+            (
+                kitaptar.jalpy_sany -
+
+                (
+                    SELECT COUNT(*)
+                    FROM kitap_beru
+                    WHERE kitap_beru.kitap_id = kitaptar.id
+                      AND kitap_beru.kaitaryldy = 'Жоқ'
+                )
+
+            ) AS korda_bar
+
+        FROM kitaptar
+
+        ORDER BY kitaptar.id DESC
+
+    """).fetchall()
+
+    db.close()
+
+    return render_template_string("""
+    <!DOCTYPE html>
+
+    <html lang="kk">
+
+    <head>
+
+        <meta charset="UTF-8">
+
+        <title>Кітаптар</title>
+
+        <style>
+
+            body {
+                font-family: Arial;
+                padding: 20px;
+                background: #f2f2f2;
+            }
+
+            table {
+                width: 100%;
+                background: white;
+                border-collapse: collapse;
+            }
+
+            th, td {
+                padding: 10px;
+                border: 1px solid #ccc;
+                text-align: center;
+            }
+
+            th {
+                background: #eeeeee;
+            }
+
+            .add {
+                display: inline-block;
+                padding: 12px 18px;
+                background: white;
+                text-decoration: none;
+                color: black;
+                border-radius: 8px;
+                margin-bottom: 20px;
+            }
+
+        </style>
+
+    </head>
+
+    <body>
+
+        <h1>КІТАПТАР</h1>
+
+        <a class="add"
+           href="/books/add">
+            + КІТАП ҚОСУ
+        </a>
+
+        <table>
+
+            <tr>
+
+                <th>ID</th>
+                <th>Кітап ID</th>
+                <th>Атауы</th>
+                <th>Автор</th>
+                <th>Санаты</th>
+                <th>Жалпы саны</th>
+                <th>Берілген</th>
+                <th>Қолда бар</th>
+
+            </tr>
+
+            {% for book in books %}
+
+            <tr>
+
+                <td>
+                    {{ book["id"] }}
+                </td>
+
+                <td>
+                    {{ book["kitap_id"] }}
+                </td>
+
+                <td>
+                    {{ book["ataui"] }}
+                </td>
+
+                <td>
+                    {{ book["avtor"] }}
+                </td>
+
+                <td>
+                    {{ book["sanat"] }}
+                </td>
+
+                <td>
+                    {{ book["jalpy_sany"] }}
+                </td>
+
+                <td>
+                    {{ book["berilgen_sany"] }}
+                </td>
+
+                <td>
+                    {{ book["korda_bar"] }}
+                </td>
+
+            </tr>
+
+            {% endfor %}
+
+        </table>
+
+        <br>
+
+        <a href="/">
+            ← Басты бет
+        </a>
+
+    </body>
+
+    </html>
+    """, books=books)
+
+
+# =========================================================
+# КІТАП ҚОСУ
+# =========================================================
+
+@app.route("/books/add", methods=["GET", "POST"])
+def add_book():
+
+    if request.method == "POST":
+
+        kitap_id = request.form["kitap_id"]
+        ataui = request.form["ataui"]
+        avtor = request.form["avtor"]
+        sanat = request.form["sanat"]
+        jalpy_sany = request.form["jalpy_sany"]
+
+        db = get_db()
+
+        db.execute("""
+            INSERT INTO kitaptar
+            (
+                kitap_id,
+                ataui,
+                avtor,
+                sanat,
+                jalpy_sany
+            )
+            VALUES (?, ?, ?, ?, ?)
+        """, (
+            kitap_id,
+            ataui,
+            avtor,
+            sanat,
+            jalpy_sany
+        ))
+
+        db.commit()
+        db.close()
+
+        return redirect(url_for("books"))
+
+
+    return render_template_string("""
+    <!DOCTYPE html>
+
+    <html lang="kk">
+
+    <head>
+
+        <meta charset="UTF-8">
+
+        <title>Кітап қосу</title>
+
+    </head>
+
+    <body>
+
+        <h1>КІТАП ҚОСУ</h1>
+
+        <form method="POST">
+
+            <label>
+                Кітап ID:
+            </label>
+
+            <br>
+
+            <input
+                type="text"
+                name="kitap_id"
+                placeholder="K0001"
+                required
+            >
+
+            <br><br>
+
+
+            <label>
+                Кітап атауы:
+            </label>
+
+            <br>
+
+            <input
+                type="text"
+                name="ataui"
+                required
+            >
+
+            <br><br>
+
+
+            <label>
+                Автор:
+            </label>
+
+            <br>
+
+            <input
+                type="text"
+                name="avtor"
+            >
+
+            <br><br>
+
+
+            <label>
+                Санаты:
+            </label>
+
+            <br>
+
+            <input
+                type="text"
+                name="sanat"
+            >
+
+            <br><br>
+
+
+            <label>
+                Жалпы саны:
+            </label>
+
+            <br>
+
+            <input
+                type="number"
+                name="jalpy_sany"
+                value="1"
+                min="0"
+                required
+            >
+
+            <br><br>
+
+            <button type="submit">
+                САҚТАУ
+            </button>
+
+        </form>
+
+        <br>
+
+        <a href="/books">
+            ← Кітаптарға қайту
+        </a>
+
+    </body>
+
+    </html>
+    """)
+
+
+# =========================================================
+# КІТАП БЕРУ
+# =========================================================
+
+@app.route("/loans")
+def loans():
+
+    db = get_db()
+
+    loans = db.execute("""
+        SELECT
+            kitap_beru.*,
+
+            okuyandar.aty AS okuyman_aty,
+
+            kitaptar.ataui AS kitap_atay
+
+        FROM kitap_beru
+
+        JOIN okuyandar
+            ON kitap_beru.okuyman_id = okuyandar.id
+
+        JOIN kitaptar
+            ON kitap_beru.kitap_id = kitaptar.id
+
+        ORDER BY kitap_beru.id DESC
+
+    """).fetchall()
+
+    db.close()
+
+    return render_template_string("""
+    <!DOCTYPE html>
+
+    <html lang="kk">
+
+    <head>
+
+        <meta charset="UTF-8">
+
+        <title>Кітап беру</title>
+
+        <style>
+
+            body {
+                font-family: Arial;
+                padding: 20px;
+                background: #f2f2f2;
+            }
+
+            table {
+                width: 100%;
+                background: white;
+                border-collapse: collapse;
+            }
+
+            th, td {
+                padding: 10px;
+                border: 1px solid #ccc;
+                text-align: center;
+            }
+
+            th {
+                background: #eeeeee;
+            }
+
+            .overdue {
+                background: #ffcccc;
+                color: #cc0000;
+                font-weight: bold;
+            }
+
+            .add {
+                display: inline-block;
+                padding: 12px 18px;
+                background: white;
+                text-decoration: none;
+                color: black;
+                border-radius: 8px;
+                margin-bottom: 20px;
+            }
+
+        </style>
+
+    </head>
+
+    <body>
+
+        <h1>КІТАП БЕРУ</h1>
+
+        <a class="add"
+           href="/loans/add">
+            + КІТАП БЕРУ
+        </a>
+
+        <table>
+
+            <tr>
+
+                <th>ID</th>
+                <th>Күні</th>
+                <th>Оқырман</th>
+                <th>Кітап</th>
+                <th>Берілді</th>
+                <th>Қайтарылды</th>
+                <th>Мерзімі</th>
+                <th>Әрекет</th>
+
+            </tr>
+
+
+            {% for loan in loans %}
+
+            <tr class="
+                {% if loan['kaitaryldy'] == 'Жоқ'
+                      and loan['merzim']
+                      and loan['merzim'] < today %}
+                    overdue
+                {% endif %}
+            ">
+
+                <td>
+                    {{ loan["id"] }}
+                </td>
+
+                <td>
+                    {{ loan["kuni"] }}
+                </td>
+
+                <td>
+                    {{ loan["okuyman_aty"] }}
+                </td>
+
+                <td>
+                    {{ loan["kitap_atay"] }}
+                </td>
+
+                <td>
+                    {{ loan["berildi"] }}
+                </td>
+
+                <td>
+                    {{ loan["kaitaryldy"] }}
+                </td>
+
+                <td>
+
+                    {{ loan["merzim"] }}
+
+                    <br><br>
+
+                    <a href="/loans/edit/{{ loan['id'] }}">
+                        Мерзімін өзгерту
+                    </a>
+
+                </td>
+
+
+                <td>
+
+                    {% if loan["kaitaryldy"] == "Жоқ" %}
+
+                    <form
+                        method="POST"
+                        action="/loans/return/{{ loan['id'] }}"
+                    >
+
+                        <button type="submit">
+                            ҚАЙТАРУ
+                        </button>
+
+                    </form>
+
+                    {% else %}
+
+                        Қайтарылды
+
+                    {% endif %}
+
+                </td>
+
+            </tr>
+
+            {% endfor %}
+
+        </table>
+
+        <br>
+
+        <a href="/">
+            ← Басты бет
+        </a>
+
+    </body>
+
+    </html>
+    """,
+    loans=loans,
+    today=date.today().isoformat()
+    )
+
+
+# =========================================================
+# КІТАПТЫ ҚАЙТАРУ
+# =========================================================
+
+@app.route("/loans/return/<int:loan_id>", methods=["POST"])
+def return_loan(loan_id):
+
+    db = get_db()
+
+    db.execute("""
+        UPDATE kitap_beru
+
+        SET
+            kaitaryldy = 'Иә',
+            kaitaru_kuni = date('now', 'localtime')
+
+        WHERE id = ?
+
+    """, (loan_id,))
+
+    db.commit()
+    db.close()
+
+    return redirect(url_for("loans"))
+
+
+# =========================================================
+# МЕРЗІМДІ ӨЗГЕРТУ
+# =========================================================
+
+@app.route("/loans/edit/<int:loan_id>", methods=["GET", "POST"])
+def edit_loan(loan_id):
+
+    db = get_db()
+
+    loan = db.execute("""
+        SELECT *
+        FROM kitap_beru
+        WHERE id = ?
+    """, (loan_id,)).fetchone()
+
+
+    if not loan:
+
+        db.close()
+
+        return "Кітап беру жазбасы табылмады"
+
+
+    if request.method == "POST":
+
+        merzim = request.form["merzim"]
+
+        db.execute("""
+            UPDATE kitap_beru
+
+            SET merzim = ?
+
+            WHERE id = ?
+
+        """, (
+            merzim,
+            loan_id
+        ))
+
+        db.commit()
+        db.close()
+
+        return redirect(url_for("loans"))
+
+
+    db.close()
+
+
+    return render_template_string("""
+    <!DOCTYPE html>
+
+    <html lang="kk">
+
+    <head>
+
+        <meta charset="UTF-8">
+
+        <title>Мерзімді өзгерту</title>
+
+    </head>
+
+    <body>
+
+        <h1>МЕРЗІМДІ ӨЗГЕРТУ</h1>
+
+
+        <form method="POST">
+
+            <label>
+                Қайтару мерзімі:
+            </label>
+
+            <br><br>
+
+            <input
+                type="date"
+                name="merzim"
+                value="{{ loan['merzim'] }}"
+                required
+            >
+
+            <br><br>
+
+            <button type="submit">
+                САҚТАУ
+            </button>
+
+        </form>
+
+
+        <br>
+
+        <a href="/loans">
+            ← Кітап беруге қайту
+        </a>
+
+    </body>
+
+    </html>
+    """,
+    loan=loan
+    )
+
+
+# =========================================================
+# КІТАП БЕРУ — ҚОСУ
+# =========================================================
+
+@app.route("/loans/add", methods=["GET", "POST"])
+def add_loan():
+
+    db = get_db()
+
+
+    readers = db.execute("""
+        SELECT *
+        FROM okuyandar
+        ORDER BY aty
+    """).fetchall()
+
+
+    books = db.execute("""
+        SELECT *
+        FROM kitaptar
+        ORDER BY ataui
+    """).fetchall()
+
+
+    if request.method == "POST":
+
+        okuyman_id = request.form["okuyman_id"]
+
+        kitap_id = request.form["kitap_id"]
+
+        merzim = request.form["merzim"]
+
+
+        db.execute("""
+            INSERT INTO kitap_beru
+            (
+                kuni,
+                okuyman_id,
+                kitap_id,
+                berildi,
+                kaitaryldy,
+                kaitaru_kuni,
+                merzim
+            )
+
+            VALUES
+            (
+                date('now', 'localtime'),
+                ?,
+                ?,
+                'Иә',
+                'Жоқ',
+                '',
+                ?
+            )
+
+        """, (
+            okuyman_id,
+            kitap_id,
+            merzim
+        ))
+
+
+        db.commit()
+
+        db.close()
+
+        return redirect(url_for("loans"))
+
+
+    db.close()
+
+
+    return render_template_string("""
+    <!DOCTYPE html>
+
+    <html lang="kk">
+
+    <head>
+
+        <meta charset="UTF-8">
+
+        <title>Кітап беру</title>
+
+        <style>
+
+            body {
+                font-family: Arial;
+                padding: 20px;
+                background: #f2f2f2;
+            }
+
+            form {
+                max-width: 500px;
+                margin: auto;
+                background: white;
+                padding: 25px;
+                border-radius: 12px;
+            }
+
+            select,
+            input,
+            button {
+
+                width: 100%;
+
+                padding: 12px;
+
+                margin-top: 5px;
+
+                box-sizing: border-box;
+
+            }
+
+            button {
+                cursor: pointer;
+            }
+
+        </style>
+
+    </head>
+
+    <body>
+
+        <h1>КІТАП БЕРУ</h1>
+
+
+        <form method="POST">
+
+
+            <label>
+                Оқырман:
+            </label>
+
+            <br>
+
+            <select name="okuyman_id" required>
+
+                <option value="">
+                    -- Оқырманды таңдаңыз --
+                </option>
+
+
+                {% for reader in readers %}
+
+                <option value="{{ reader['id'] }}">
+
+                    {{ reader["aty"] }}
+                    -
+                    {{ reader["synyp"] }}
+
+                </option>
+
+                {% endfor %}
+
+            </select>
+
+
+            <br><br>
+
+
+            <label>
+                Кітап:
+            </label>
+
+            <br>
+
+            <select name="kitap_id" required>
+
+                <option value="">
+                    -- Кітапты таңдаңыз --
+                </option>
+
+
+                {% for book in books %}
+
+                <option value="{{ book['id'] }}">
+
+                    {{ book["ataui"] }}
+
+                </option>
+
+                {% endfor %}
+
+            </select>
+
+
+            <br><br>
+
+
+            <label>
+                Қайтару мерзімі:
+            </label>
+
+            <br>
+
+            <input
+                type="date"
+                name="merzim"
+                required
+            >
+
+
+            <br><br>
+
+
+            <button type="submit">
+                КІТАП БЕРУ
+            </button>
+
+
+        </form>
+
+
+        <br>
+
+        <a href="/loans">
+            ← Кітап беруге қайту
+        </a>
+
+    </body>
+
+    </html>
+    """,
+    readers=readers,
+    books=books
+    )
+
+
+# =========================================================
+# ЕСЕП
+# =========================================================
+
+@app.route("/report")
+def report():
+
+    db = get_db()
+
+
+    today_issued = db.execute("""
+        SELECT COUNT(*)
+
+        FROM kitap_beru
+
+        WHERE kuni = date('now', 'localtime')
+
+          AND berildi = 'Иә'
+
+    """).fetchone()[0]
+
+
+    today_students = db.execute("""
+        SELECT COUNT(*)
+
+        FROM kitap_beru
+
+        JOIN okuyandar
+          ON kitap_beru.okuyman_id = okuyandar.id
+
+        WHERE kitap_beru.kuni =
+              date('now', 'localtime')
+
+          AND kitap_beru.berildi = 'Иә'
+
+          AND okuyandar.turi = 'Оқушы'
+
+    """).fetchone()[0]
+
+
+    today_teachers = db.execute("""
+        SELECT COUNT(*)
+
+        FROM kitap_beru
+
+        JOIN okuyandar
+          ON kitap_beru.okuyman_id = okuyandar.id
+
+        WHERE kitap_beru.kuni =
+              date('now', 'localtime')
+
+          AND kitap_beru.berildi = 'Иә'
+
+          AND okuyandar.turi = 'Мұғалім'
+
+    """).fetchone()[0]
+
+
+    currently_out = db.execute("""
+        SELECT COUNT(*)
+
+        FROM kitap_beru
+
+        WHERE berildi = 'Иә'
+
+          AND kaitaryldy = 'Жоқ'
+
+    """).fetchone()[0]
+
+
+    overdue = db.execute("""
+        SELECT COUNT(*)
+
+        FROM kitap_beru
+
+        WHERE berildi = 'Иә'
+
+          AND kaitaryldy = 'Жоқ'
+
+          AND merzim < date('now', 'localtime')
+
+    """).fetchone()[0]
+
+
+    this_month = db.execute("""
+        SELECT COUNT(*)
+
+        FROM kitap_beru
+
+        WHERE strftime('%Y-%m', kuni) =
+
+              strftime(
+                  '%Y-%m',
+                  'now',
+                  'localtime'
+              )
+
+          AND berildi = 'Иә'
+
+    """).fetchone()[0]
+
+
+    db.close()
+
+
+    return render_template_string("""
+    <!DOCTYPE html>
+
+    <html lang="kk">
+
+    <head>
+
+        <meta charset="UTF-8">
+
+        <meta
+            name="viewport"
+            content="width=device-width, initial-scale=1.0"
+        >
+
+        <title>Есеп</title>
+
+
+        <style>
+
+            body {
+
+                font-family: Arial, sans-serif;
+
+                background: #f2f2f2;
+
+                padding: 20px;
+
+            }
+
+
+            h1 {
+
+                text-align: center;
+
+            }
+
+
+            .cards {
+
+                max-width: 800px;
+
+                margin: 20px auto;
+
+                display: grid;
+
+                grid-template-columns:
+                    repeat(
+                        auto-fit,
+                        minmax(220px, 1fr)
+                    );
+
+                gap: 15px;
+
+            }
+
+
+            .card {
+
+                background: white;
+
+                padding: 25px;
+
+                border-radius: 12px;
+
+                text-align: center;
+
+                box-shadow:
+                    0 2px 8px #cccccc;
+
+            }
+
+
+            .number {
+
+                font-size: 40px;
+
+                font-weight: bold;
+
+                margin-top: 10px;
+
+            }
+
+
+            .back {
+
+                display: block;
+
+                text-align: center;
+
+                margin: 30px;
+
+                font-size: 18px;
+
+            }
+
+
+        </style>
+
+    </head>
+
+
+    <body>
+
+
+        <h1>
+            КІТАПХАНА ЕСЕБІ
+        </h1>
+
+
+        <div class="cards">
+
+
+            <div class="card">
+
+                <div>
+                    Бүгін берілген кітап
+                </div>
+
+                <div class="number">
+                    {{ today_issued }}
+                </div>
+
+            </div>
+
+
+            <div class="card">
+
+                <div>
+                    Бүгін кітап алған оқушылар
+                </div>
+
+                <div class="number">
+                    {{ today_students }}
+                </div>
+
+            </div>
+
+
+            <div class="card">
+
+                <div>
+                    Бүгін кітап алған мұғалімдер
+                </div>
+
+                <div class="number">
+                    {{ today_teachers }}
+                </div>
+
+            </div>
+
+
+            <div class="card">
+
+                <div>
+                    Қазір қолда жоқ кітаптар
+                </div>
+
+                <div class="number">
+                    {{ currently_out }}
+                </div>
+
+            </div>
+
+
+            <div class="card">
+
+                <div>
+                    Мерзімі өтіп кеткен
+                </div>
+
+                <div class="number">
+                    {{ overdue }}
+                </div>
+
+            </div>
+
+
+            <div class="card">
+
+                <div>
+                    Осы айда берілген
+                </div>
+
+                <div class="number">
+                    {{ this_month }}
+                </div>
+
+            </div>
+
+
+        </div>
+
+
+        <a class="back"
+           href="/">
+            ← Басты бетке
+        </a>
+
+
+    </body>
+
+    </html>
+
+    """,
+    today_issued=today_issued,
+    today_students=today_students,
+    today_teachers=today_teachers,
+    currently_out=currently_out,
+    overdue=overdue,
+    this_month=this_month
+    )
+
+
+# =========================================================
+# ІСКЕ ҚОСУ
+# =========================================================
+
+if __name__ == "__main__":
+
+    init_db()
+
+    app.run(
+        host="0.0.0.0",
+        port=5000,
+        debug=True
+    )
