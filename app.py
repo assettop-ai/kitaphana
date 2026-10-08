@@ -92,30 +92,30 @@ def home():
     db = get_db()
 
     total_books = db.execute("""
-        SELECT COALESCE(SUM(jalpy_sany), 0)
+        SELECT COALESCE(SUM(jalpy_sany), 0) AS value
         FROM kitaptar
-    """).fetchone()[0]
+    """).fetchone()["value"]
 
     total_readers = db.execute("""
-        SELECT COUNT(*)
+        SELECT COUNT(*) AS value
         FROM okuyandar
-    """).fetchone()[0]
+    """).fetchone()["value"]
 
     currently_out = db.execute("""
-        SELECT COUNT(*)
+        SELECT COUNT(*) AS value
         FROM kitap_beru
         WHERE berildi = 'Иә'
-          AND kaitaryldy = 'Жоқ'
-    """).fetchone()[0]
+          AND kaitaryldy = 'Жоқ'    
+    """).fetchone()["value"]
 
     if DATABASE_URL:
         overdue = db.execute("""
-            SELECT COUNT(*)
+            SELECT COUNT(*) AS value
             FROM kitap_beru
             WHERE berildi = 'Иә'
               AND kaitaryldy = 'Жоқ'
               AND merzim::date < CURRENT_DATE
-        """).fetchone()[0]
+        """).fetchone()["value"]
     else:
         overdue = db.execute("""
             SELECT COUNT(*)
@@ -1478,37 +1478,26 @@ def report():
 
 
     today_issued = db.execute("""
-        SELECT COUNT(*)
-
+        SELECT COUNT(*) AS value
         FROM kitap_beru
-
         WHERE kuni = CURRENT_DATE
-
           AND berildi = 'Иә'
-
-    """).fetchone()[0]
+    """).fetchone()["value"]
 
 
     today_students = db.execute("""
-        SELECT COUNT(*)
-
+        SELECT COUNT(*) AS value
         FROM kitap_beru
-
         JOIN okuyandar
           ON kitap_beru.okuyman_id = okuyandar.id
-
-        WHERE kitap_beru.kuni =
-              CURRENT_DATE
-
+        WHERE kitap_beru.kuni = CURRENT_DATE
           AND kitap_beru.berildi = 'Иә'
-
           AND okuyandar.turi = 'Оқушы'
-
-    """).fetchone()[0]
+    """).fetchone()["value"]
 
 
     today_teachers = db.execute("""
-        SELECT COUNT(*)
+        SELECT COUNT(*) AS value
 
         FROM kitap_beru
 
@@ -1522,11 +1511,11 @@ def report():
 
           AND okuyandar.turi = 'Мұғалім'
 
-    """).fetchone()[0]
+    """).fetchone()["value"]
 
 
     currently_out = db.execute("""
-        SELECT COUNT(*)
+        SELECT COUNT(*) AS value
 
         FROM kitap_beru
 
@@ -1534,11 +1523,11 @@ def report():
 
           AND kaitaryldy = 'Жоқ'
 
-    """).fetchone()[0]
+    """).fetchone()["value"]
 
 
     overdue = db.execute("""
-        SELECT COUNT(*)
+        SELECT COUNT(*) AS value
 
         FROM kitap_beru
 
@@ -1548,11 +1537,11 @@ def report():
 
           AND merzim < date('now', 'localtime')
 
-    """).fetchone()[0]
+    """).fetchone()["value"]
 
 
     this_month = db.execute("""
-        SELECT COUNT(*)
+        SELECT COUNT(*) AS value
 
         FROM kitap_beru
 
@@ -1566,7 +1555,7 @@ def report():
 
           AND berildi = 'Иә'
 
-    """).fetchone()[0]
+    """).fetchone()["value"]
 
 
     db.close()
