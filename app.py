@@ -11,7 +11,15 @@ DB_NAME = "kitaphana.db"
 # ДЕРЕКҚОРҒА ҚОСЫЛУ
 # =========================================================
 
+import os
+
+DATABASE_URL = os.environ.get("DATABASE_URL")
+
 def get_db():
+    if DATABASE_URL:
+        import psycopg
+        return psycopg.connect(DATABASE_URL)
+
     db = sqlite3.connect(DB_NAME)
     db.row_factory = sqlite3.Row
     return db
