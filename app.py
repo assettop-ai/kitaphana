@@ -103,13 +103,22 @@ def home():
           AND kaitaryldy = 'Жоқ'
     """).fetchone()[0]
 
-    overdue = db.execute("""
-        SELECT COUNT(*)
-        FROM kitap_beru
-        WHERE berildi = 'Иә'
-          AND kaitaryldy = 'Жоқ'
-          AND merzim < CURRENT_DATE
-    """).fetchone()[0]
+    if DATABASE_URL:
+        overdue = db.execute("""
+            SELECT COUNT(*)
+            FROM kitap_beru
+            WHERE berildi = 'Иә'
+              AND kaitaryldy = 'Жоқ'
+              AND merzim::date < CURRENT_DATE
+        """).fetchone()[0]
+    else:
+        overdue = db.execute("""
+            SELECT COUNT(*)
+            FROM kitap_beru
+            WHERE berildi = 'Иә'
+              AND kaitaryldy = 'Жоқ'
+              AND merzim < date('now', 'localtime')
+        """).fetchone()[0]
 
     db.close()
 
