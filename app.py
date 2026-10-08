@@ -18,7 +18,12 @@ DATABASE_URL = os.environ.get("DATABASE_URL")
 def get_db():
     if DATABASE_URL:
         import psycopg
-        return psycopg.connect(DATABASE_URL)
+        from psycopg.rows import dict_row
+
+        return psycopg.connect(
+            DATABASE_URL,
+            row_factory=dict_row
+        )
 
     db = sqlite3.connect(DB_NAME)
     db.row_factory = sqlite3.Row
@@ -117,7 +122,7 @@ def home():
             FROM kitap_beru
             WHERE berildi = 'Иә'
               AND kaitaryldy = 'Жоқ'
-              AND merzim < date('now', 'localtime')
+              AND merzim::date < CURRENT_DATE
         """).fetchone()[0]
 
     db.close()
@@ -482,7 +487,7 @@ def add_reader():
                 synyp,
                 turi
             )
-            VALUES (?, ?, ?)
+            VALUES (%s, %s, %s)
         """, (
             aty,
             synyp,
@@ -774,7 +779,7 @@ def add_book():
                 sanat,
                 jalpy_sany
             )
-            VALUES (?, ?, ?, ?, ?)
+            VALUES (%s, %s, %s, %s, %s)
         """, (
             kitap_id,
             ataui,
@@ -1119,7 +1124,7 @@ def return_loan(loan_id):
             kaitaryldy = 'Иә',
             kaitaru_kuni = date('now', 'localtime')
 
-        WHERE id = ?
+        WHERE id = %s
 
     """, (loan_id,))
 
@@ -1141,7 +1146,7 @@ def edit_loan(loan_id):
     loan = db.execute("""
         SELECT *
         FROM kitap_beru
-        WHERE id = ?
+        WHERE id = %s
     """, (loan_id,)).fetchone()
 
 
@@ -1159,9 +1164,9 @@ def edit_loan(loan_id):
         db.execute("""
             UPDATE kitap_beru
 
-            SET merzim = ?
+            SET merzim = %s
 
-            WHERE id = ?
+            WHERE id = %s
 
         """, (
             merzim,
@@ -1281,12 +1286,12 @@ def add_loan():
             VALUES
             (
                 date('now', 'localtime'),
-                ?,
-                ?,
+                %s,
+                %s,
                 'Иә',
                 'Жоқ',
                 '',
-                ?
+                %s
             )
 
         """, (
@@ -1477,7 +1482,7 @@ def report():
 
         FROM kitap_beru
 
-        WHERE kuni = date('now', 'localtime')
+        WHERE kuni = CURRENT_DATE
 
           AND berildi = 'Иә'
 
@@ -1493,7 +1498,7 @@ def report():
           ON kitap_beru.okuyman_id = okuyandar.id
 
         WHERE kitap_beru.kuni =
-              date('now', 'localtime')
+              CURRENT_DATE
 
           AND kitap_beru.berildi = 'Иә'
 
@@ -1511,7 +1516,7 @@ def report():
           ON kitap_beru.okuyman_id = okuyandar.id
 
         WHERE kitap_beru.kuni =
-              date('now', 'localtime')
+              CURRENT_DATE
 
           AND kitap_beru.berildi = 'Иә'
 
