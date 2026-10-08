@@ -1117,16 +1117,22 @@ def return_loan(loan_id):
 
     db = get_db()
 
-    db.execute("""
-        UPDATE kitap_beru
-
-        SET
-            kaitaryldy = 'Иә',
-            kaitaru_kuni = date('now', 'localtime')
-
-        WHERE id = %s
-
-    """, (loan_id,))
+    if DATABASE_URL:
+        db.execute("""
+            UPDATE kitap_beru
+            SET
+                kaitaryldy = 'Иә',
+                kaitaru_kuni = %s
+            WHERE id = %s
+        """, (date.today().isoformat(), loan_id))
+    else:
+        db.execute("""
+            UPDATE kitap_beru
+            SET
+                kaitaryldy = 'Иә',
+                kaitaru_kuni = ?
+            WHERE id = ?
+        """, (date.today().isoformat(), loan_id))
 
     db.commit()
     db.close()
@@ -1262,15 +1268,13 @@ def add_loan():
     """).fetchall()
 
 
-    if request.method == "POST":
+   if request.method == "POST":
 
-        okuyman_id = request.form["okuyman_id"]
+    okuyman_id = request.form["okuyman_id"]
+    kitap_id = request.form["kitap_id"]
+    merzim = request.form["merzim"]
 
-        kitap_id = request.form["kitap_id"]
-
-        merzim = request.form["merzim"]
-
-
+    if DATABASE_URL:
         db.execute("""
             INSERT INTO kitap_beru
             (
@@ -1282,10 +1286,9 @@ def add_loan():
                 kaitaru_kuni,
                 merzim
             )
-
             VALUES
             (
-                date('now', 'localtime'),
+                %s,
                 %s,
                 %s,
                 'Иә',
@@ -1293,22 +1296,47 @@ def add_loan():
                 '',
                 %s
             )
-
         """, (
+            date.today().isoformat(),
+            okuyman_id,
+            kitap_id,
+            merzim
+        ))
+    else:
+        db.execute("""
+            INSERT INTO kitap_beru
+            (
+                kuni,
+                okuyman_id,
+                kitap_id,
+                berildi,
+                kaitaryldy,
+                kaitaru_kuni,
+                merzim
+            )
+            VALUES
+            (
+                ?,
+                ?,
+                ?,
+                'Иә',
+                'Жоқ',
+                '',
+                ?
+            )
+        """, (
+            date.today().isoformat(),
             okuyman_id,
             kitap_id,
             merzim
         ))
 
-
-        db.commit()
-
-        db.close()
-
-        return redirect(url_for("loans"))
-
-
+    db.commit()
     db.close()
+
+    return redirect(url_for("loans"))
+
+db.close()
 
 
     return render_template_string("""
@@ -1527,15 +1555,10 @@ def report():
 
     overdue = db.execute("""
         SELECT COUNT(*) AS value
-
         FROM kitap_beru
-
         WHERE berildi = 'Иә'
-
           AND kaitaryldy = 'Жоқ'
-
-          AND merzim < date('now', 'localtime')
-
+          AND merzim::date < CURRENT_DATE
     """).fetchone()["value"]
 
 
