@@ -1253,13 +1253,11 @@ def add_loan():
 
     db = get_db()
 
-
     readers = db.execute("""
         SELECT *
         FROM okuyandar
         ORDER BY aty
     """).fetchall()
-
 
     books = db.execute("""
         SELECT *
@@ -1267,234 +1265,113 @@ def add_loan():
         ORDER BY ataui
     """).fetchall()
 
+    if request.method == "POST":
 
-   if request.method == "POST":
+        okuyman_id = request.form["okuyman_id"]
+        kitap_id = request.form["kitap_id"]
+        merzim = request.form["merzim"]
 
-    okuyman_id = request.form["okuyman_id"]
-    kitap_id = request.form["kitap_id"]
-    merzim = request.form["merzim"]
-
-    if DATABASE_URL:
-        db.execute("""
-            INSERT INTO kitap_beru
-            (
-                kuni,
+        if DATABASE_URL:
+            db.execute("""
+                INSERT INTO kitap_beru
+                (
+                    kuni,
+                    okuyman_id,
+                    kitap_id,
+                    berildi,
+                    kaitaryldy,
+                    kaitaru_kuni,
+                    merzim
+                )
+                VALUES
+                (
+                    %s,
+                    %s,
+                    %s,
+                    'Иә',
+                    'Жоқ',
+                    '',
+                    %s
+                )
+            """, (
+                date.today().isoformat(),
                 okuyman_id,
                 kitap_id,
-                berildi,
-                kaitaryldy,
-                kaitaru_kuni,
                 merzim
-            )
-            VALUES
-            (
-                %s,
-                %s,
-                %s,
-                'Иә',
-                'Жоқ',
-                '',
-                %s
-            )
-        """, (
-            date.today().isoformat(),
-            okuyman_id,
-            kitap_id,
-            merzim
-        ))
-    else:
-        db.execute("""
-            INSERT INTO kitap_beru
-            (
-                kuni,
+            ))
+
+        else:
+            db.execute("""
+                INSERT INTO kitap_beru
+                (
+                    kuni,
+                    okuyman_id,
+                    kitap_id,
+                    berildi,
+                    kaitaryldy,
+                    kaitaru_kuni,
+                    merzim
+                )
+                VALUES
+                (
+                    ?,
+                    ?,
+                    ?,
+                    'Иә',
+                    'Жоқ',
+                    '',
+                    ?
+                )
+            """, (
+                date.today().isoformat(),
                 okuyman_id,
                 kitap_id,
-                berildi,
-                kaitaryldy,
-                kaitaru_kuni,
                 merzim
-            )
-            VALUES
-            (
-                ?,
-                ?,
-                ?,
-                'Иә',
-                'Жоқ',
-                '',
-                ?
-            )
-        """, (
-            date.today().isoformat(),
-            okuyman_id,
-            kitap_id,
-            merzim
-        ))
+            ))
 
-    db.commit()
+        db.commit()
+        db.close()
+
+        return redirect(url_for("loans"))
+
     db.close()
 
-    return redirect(url_for("loans"))
-
-db.close()
-
-
     return render_template_string("""
-    <!DOCTYPE html>
+    <h2>Кітап беру</h2>
 
-    <html lang="kk">
+    <form method="post">
 
-    <head>
-
-        <meta charset="UTF-8">
-
-        <title>Кітап беру</title>
-
-        <style>
-
-            body {
-                font-family: Arial;
-                padding: 20px;
-                background: #f2f2f2;
-            }
-
-            form {
-                max-width: 500px;
-                margin: auto;
-                background: white;
-                padding: 25px;
-                border-radius: 12px;
-            }
-
-            select,
-            input,
-            button {
-
-                width: 100%;
-
-                padding: 12px;
-
-                margin-top: 5px;
-
-                box-sizing: border-box;
-
-            }
-
-            button {
-                cursor: pointer;
-            }
-
-        </style>
-
-    </head>
-
-    <body>
-
-        <h1>КІТАП БЕРУ</h1>
-
-
-        <form method="POST">
-
-
-            <label>
-                Оқырман:
-            </label>
-
-            <br>
-
-            <select name="okuyman_id" required>
-
-                <option value="">
-                    -- Оқырманды таңдаңыз --
+        <label>Оқырман:</label>
+        <select name="okuyman_id" required>
+            {% for reader in readers %}
+                <option value="{{ reader.id }}">
+                    {{ reader.aty }} — {{ reader.synyp }}
                 </option>
+            {% endfor %}
+        </select>
 
+        <br><br>
 
-                {% for reader in readers %}
-
-                <option value="{{ reader['id'] }}">
-
-                    {{ reader["aty"] }}
-                    -
-                    {{ reader["synyp"] }}
-
+        <label>Кітап:</label>
+        <select name="kitap_id" required>
+            {% for book in books %}
+                <option value="{{ book.id }}">
+                    {{ book.ataui }}
                 </option>
+            {% endfor %}
+        </select>
 
-                {% endfor %}
+        <br><br>
 
-            </select>
+        <label>Мерзімі:</label>
+        <input type="date" name="merzim" required>
 
+        <br><br>
 
-            <br><br>
+        <button type="submit">Кітап беру</button>
 
-
-            <label>
-                Кітап:
-            </label>
-
-            <br>
-
-            <select name="kitap_id" required>
-
-                <option value="">
-                    -- Кітапты таңдаңыз --
-                </option>
-
-
-                {% for book in books %}
-
-                <option value="{{ book['id'] }}">
-
-                    {{ book["ataui"] }}
-
-                </option>
-
-                {% endfor %}
-
-            </select>
-
-
-            <br><br>
-
-
-            <label>
-                Қайтару мерзімі:
-            </label>
-
-            <br>
-
-            <input
-                type="date"
-                name="merzim"
-                required
-            >
-
-
-            <br><br>
-
-
-            <button type="submit">
-                КІТАП БЕРУ
-            </button>
-
-
-        </form>
-
-
-        <br>
-
-        <a href="/loans">
-            ← Кітап беруге қайту
-        </a>
-
-    </body>
-
-    </html>
-    """,
-    readers=readers,
-    books=books
-    )
-
-
+    </form>
+    """, readers=readers, books=books)
 # =========================================================
 # ЕСЕП
 # =========================================================
