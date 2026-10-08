@@ -122,7 +122,7 @@ def home():
             FROM kitap_beru
             WHERE berildi = 'Иә'
               AND kaitaryldy = 'Жоқ'
-              AND merzim::date < CURRENT_DATE
+              AND date(merzim) < date('now', 'localtime')
         """).fetchone()[0]
 
     db.close()
@@ -1480,7 +1480,7 @@ def report():
     today_issued = db.execute("""
         SELECT COUNT(*) AS value
         FROM kitap_beru
-        WHERE kuni = CURRENT_DATE
+        WHERE kuni::date = CURRENT_DATE
           AND berildi = 'Иә'
     """).fetchone()["value"]
 
@@ -1490,7 +1490,7 @@ def report():
         FROM kitap_beru
         JOIN okuyandar
           ON kitap_beru.okuyman_id = okuyandar.id
-        WHERE kitap_beru.kuni = CURRENT_DATE
+        WHERE kitap_beru.kuni::date = CURRENT_DATE
           AND kitap_beru.berildi = 'Иә'
           AND okuyandar.turi = 'Оқушы'
     """).fetchone()["value"]
@@ -1504,8 +1504,7 @@ def report():
         JOIN okuyandar
           ON kitap_beru.okuyman_id = okuyandar.id
 
-        WHERE kitap_beru.kuni =
-              CURRENT_DATE
+        WHERE kitap_beru.kuni::date = CURRENT_DATE
 
           AND kitap_beru.berildi = 'Иә'
 
@@ -1542,21 +1541,11 @@ def report():
 
     this_month = db.execute("""
         SELECT COUNT(*) AS value
-
         FROM kitap_beru
-
-        WHERE strftime('%Y-%m', kuni) =
-
-              strftime(
-                  '%Y-%m',
-                  'now',
-                  'localtime'
-              )
-
+        WHERE kuni::date >= DATE_TRUNC('month', CURRENT_DATE)
+          AND kuni::date < DATE_TRUNC('month', CURRENT_DATE) + INTERVAL '1 month'
           AND berildi = 'Иә'
-
     """).fetchone()["value"]
-
 
     db.close()
 
