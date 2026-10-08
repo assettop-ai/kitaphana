@@ -108,7 +108,7 @@ def home():
         FROM kitap_beru
         WHERE berildi = 'Иә'
           AND kaitaryldy = 'Жоқ'
-          AND merzim < date('now', 'localtime')
+          AND merzim < CURRENT_DATE
     """).fetchone()[0]
 
     db.close()
