@@ -616,7 +616,8 @@ def readers():
 
 @app.route("/readers/add", methods=["GET", "POST"])
 def add_reader():
-
+    if not is_librarian():
+        return "Бұл бөлімге тек кітапханашы кіре алады", 403
     if request.method == "POST":
 
         aty = request.form["aty"]
@@ -1264,7 +1265,8 @@ def loans():
 
 @app.route("/loans/return/<int:loan_id>", methods=["POST"])
 def return_loan(loan_id):
-
+    if not is_librarian():
+        return "Бұл бөлімге тек кітапханашы кіре алады", 403
     db = get_db()
 
     if DATABASE_URL:
