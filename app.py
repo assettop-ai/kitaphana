@@ -556,10 +556,12 @@ def readers():
 
         <h1>ОҚЫРМАНДАР</h1>
 
-        <a class="add"
-           href="/readers/add">
-            + ОҚЫРМАН ҚОСУ
-        </a>
+        {% if session.get("role") == "librarian" %}
+<a class="add"
+   href="/readers/add">
+    + ОҚЫРМАН ҚОСУ
+</a>
+{% endif %}
 
         <table>
 
@@ -825,10 +827,12 @@ def books():
 
         <h1>КІТАПТАР</h1>
 
-        <a class="add"
-           href="/books/add">
-            + КІТАП ҚОСУ
-        </a>
+        {% if session.get("role") == "librarian" %}
+<a class="add"
+   href="/books/add">
+    + КІТАП ҚОСУ
+</a>
+{% endif %}
 
         <table>
 
@@ -1149,8 +1153,10 @@ def loans():
 
         <a class="add"
            href="/loans/add">
-            + КІТАП БЕРУ
-        </a>
+           {% if session.get("role") == "librarian" %} <a class="add" href="/loans/add">
++ КІТАП БЕРУ </a>
+{% endif %}
+
 
         <table>
 
@@ -1171,7 +1177,7 @@ def loans():
             {% for loan in loans %}
 
             <tr class="
-                {% if loan['kaitaryldy'] == 'Жоқ'
+                {% if loan["kaitaryldy"] == "Жоқ" and session.get("role") == "librarian" %}
                       and loan['merzim']
                       and loan['merzim'] < today %}
                     overdue
@@ -1208,9 +1214,10 @@ def loans():
 
                     <br><br>
 
-                    <a href="/loans/edit/{{ loan['id'] }}">
-                        Мерзімін өзгерту
-                    </a>
+                    {% if session.get("role") == "librarian" %} <a href="/loans/edit/{{ loan['id'] }}">
+Мерзімін өзгерту </a>
+{% endif %}
+
 
                 </td>
 
