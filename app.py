@@ -3,11 +3,12 @@ import sqlite3
 from datetime import date
 
 app = Flask(__name__)
-@app.route("/logout")
-def logout():
-    session.clear()
-    return redirect("/login")
 app.secret_key = "KITAPHANA_SECRET_2026"
+@app.route("/logout") 
+def logout(): 
+    session.clear() 
+    return redirect(url_for("login"))
+
 
 USERS = {
     "library": {
@@ -226,12 +227,7 @@ def is_logged_in():
 
 def is_librarian():
     return session.get("role") == "librarian"
-@app.route("/logout")
-def logout():
-
-    session.clear()
-
-    return redirect(url_for("login"))
+   
 @app.route("/")
 def home():
 
