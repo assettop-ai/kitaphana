@@ -1112,10 +1112,10 @@ def loans():
             }
 
             table {
-    width: 95%;
-    margin: 20px auto;
+    width: 100%;
     background: white;
     border-collapse: collapse;
+    table-layout: auto;
 }
 
             th, td {
@@ -1143,7 +1143,12 @@ def loans():
                 border-radius: 8px;
                 margin-bottom: 20px;
             }
-
+th, td {
+    padding: 10px;
+    border: 1px solid #ccc;
+    text-align: center;
+    white-space: nowrap;
+}
         </style>
 
     </head>
