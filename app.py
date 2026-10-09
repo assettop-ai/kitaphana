@@ -1169,7 +1169,10 @@ def loans():
                 <th>Берілді</th>
                 <th>Қайтарылды</th>
                 <th>Мерзімі</th>
+                {% if session.get("role") == "librarian" %}
                 <th>Әрекет</th>
+
+                {% endif %}
 
             </tr>
 
@@ -1177,12 +1180,13 @@ def loans():
             {% for loan in loans %}
 
             <tr class="
-                {% if loan["kaitaryldy"] == "Жоқ" and session.get("role") == "librarian" %}
-                      and loan['merzim']
-                      and loan['merzim'] < today %}
-                    overdue
-                {% endif %}
-            ">
+    {% if loan['kaitaryldy'] == 'Жоқ'
+          and loan['merzim']
+          and loan['merzim'] < today %}
+        overdue
+    {% endif %}
+"> 
+
 
                 <td>
                     {{ loan["id"] }}
@@ -1224,24 +1228,26 @@ def loans():
 
                 <td>
 
-                    {% if loan["kaitaryldy"] == "Жоқ" %}
+                    {% if session.get("role") == "librarian" %}
+{% if loan["kaitaryldy"] == "Жоқ" %}
 
-                    <form
-                        method="POST"
-                        action="/loans/return/{{ loan['id'] }}"
-                    >
+```
+    <form
+        method="POST"
+        action="/loans/return/{{ loan['id'] }}"
+    >
+        <button type="submit">
+            ҚАЙТАРУ
+        </button>
+    </form>
 
-                        <button type="submit">
-                            ҚАЙТАРУ
-                        </button>
+{% else %}
+    Қайтарылды
+{% endif %}
+```
 
-                    </form>
+{% endif %}
 
-                    {% else %}
-
-                        Қайтарылды
-
-                    {% endif %}
 
                 </td>
 
