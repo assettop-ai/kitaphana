@@ -1213,43 +1213,29 @@ def loans():
                 </td>
 
                 <td>
+    {{ loan["merzim"] }}
 
-                    {{ loan["merzim"] }}
+    {% if session.get("role") == "librarian" %}
+        <br><br>
+        <a href="/loans/edit/{{ loan['id'] }}">
+            Мерзімін өзгерту
+        </a>
+    {% endif %}
+</td>
 
-                    <br><br>
 
-                    {% if session.get("role") == "librarian" %} <a href="/loans/edit/{{ loan['id'] }}">
-Мерзімін өзгерту </a>
+               {% if session.get("role") == "librarian" %}
+<td>
+    {% if loan["kaitaryldy"] == "Жоқ" %}
+        <form method="POST"
+              action="/loans/return/{{ loan['id'] }}">
+            <button type="submit">ҚАЙТАРУ</button>
+        </form>
+    {% else %}
+        Қайтарылды
+    {% endif %}
+</td>
 {% endif %}
-
-
-                </td>
-
-
-                <td>
-
-                    {% if session.get("role") == "librarian" %}
-{% if loan["kaitaryldy"] == "Жоқ" %}
-
-```
-    <form
-        method="POST"
-        action="/loans/return/{{ loan['id'] }}"
-    >
-        <button type="submit">
-            ҚАЙТАРУ
-        </button>
-    </form>
-
-{% else %}
-    Қайтарылды
-{% endif %}
-```
-
-{% endif %}
-
-
-                </td>
 
             </tr>
 
