@@ -470,6 +470,11 @@ def home():
                href="/report">
                 ЕСЕП
             </a>
+            ```html
+            <a class="button danger" href="/logout">
+                ЖҮЙЕДЕН ШЫҒУ
+            </a>
+```
 
         </div>
 
