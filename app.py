@@ -1112,10 +1112,11 @@ def loans():
             }
 
             table {
-                width: 100%;
-                background: white;
-                border-collapse: collapse;
-            }
+    width: 95%;
+    margin: 20px auto;
+    background: white;
+    border-collapse: collapse;
+}
 
             th, td {
                 padding: 10px;
@@ -1159,22 +1160,19 @@ def loans():
 
 
         <table>
+    <tr>
+        <th>ID</th>
+        <th>Күні</th>
+        <th>Оқырман</th>
+        <th>Кітап</th>
+        <th>Берілді</th>
+        <th>Қайтарылды</th>
+        <th>Мерзімі</th>
+        {% if session.get("role") == "librarian" %}
+            <th>Әрекет</th>
+        {% endif %}
+    </tr>
 
-            <tr>
-
-                <th>ID</th>
-                <th>Күні</th>
-                <th>Оқырман</th>
-                <th>Кітап</th>
-                <th>Берілді</th>
-                <th>Қайтарылды</th>
-                <th>Мерзімі</th>
-                {% if session.get("role") == "librarian" %}
-                <th>Әрекет</th>
-
-                {% endif %}
-
-            </tr>
 
 
             {% for loan in loans %}
