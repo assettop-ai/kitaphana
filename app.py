@@ -1,9 +1,20 @@
-from flask import Flask, request, redirect, url_for, render_template_string
+from flask import Flask, request, redirect, url_for, render_template_string, session
 import sqlite3
 from datetime import date
 
 app = Flask(__name__)
+app.secret_key = "KITAPHANA_SECRET_2026"
 
+USERS = {
+    "library": {
+        "password": "library123",
+        "role": "librarian"
+    },
+    "admin": {
+        "password": "admin123",
+        "role": "admin"
+    }
+}
 DB_NAME = "kitaphana.db"
 
 
@@ -85,9 +96,143 @@ def init_db():
 # =========================================================
 # БАСТЫ БЕТ
 # =========================================================
+@app.route("/login", methods=["GET", "POST"])
+def login():
 
+    error = ""
+
+    if request.method == "POST":
+
+        username = request.form["username"]
+        password = request.form["password"]
+
+        user = USERS.get(username)
+
+        if user and user["password"] == password:
+
+            session["username"] = username
+            session["role"] = user["role"]
+
+            return redirect(url_for("home"))
+
+        error = "Логин немесе пароль қате"
+
+    return render_template_string("""
+    <!DOCTYPE html>
+    <html lang="kk">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Кітапханаға кіру</title>
+
+        <style>
+            body {
+                font-family: Arial, sans-serif;
+                background: #f2f4f7;
+                display: flex;
+                justify-content: center;
+                align-items: center;
+                min-height: 100vh;
+                margin: 0;
+            }
+
+            .login-box {
+                background: white;
+                width: 90%;
+                max-width: 380px;
+                padding: 30px;
+                border-radius: 15px;
+                box-shadow: 0 5px 20px rgba(0,0,0,0.15);
+            }
+
+            h2 {
+                text-align: center;
+                margin-bottom: 25px;
+            }
+
+            input {
+                width: 100%;
+                box-sizing: border-box;
+                padding: 12px;
+                margin-bottom: 15px;
+                border: 1px solid #ccc;
+                border-radius: 8px;
+                font-size: 16px;
+            }
+
+            button {
+                width: 100%;
+                padding: 12px;
+                background: #2563eb;
+                color: white;
+                border: none;
+                border-radius: 8px;
+                font-size: 16px;
+                cursor: pointer;
+            }
+
+            .error {
+                color: red;
+                text-align: center;
+                margin-bottom: 15px;
+            }
+        </style>
+    </head>
+
+    <body>
+
+        <div class="login-box">
+
+            <h2>📚 Мектеп кітапханасы</h2>
+
+            {% if error %}
+                <div class="error">{{ error }}</div>
+            {% endif %}
+
+            <form method="post">
+
+                <input
+                    type="text"
+                    name="username"
+                    placeholder="Логин"
+                    required
+                >
+
+                <input
+                    type="password"
+                    name="password"
+                    placeholder="Пароль"
+                    required
+                >
+
+                <button type="submit">
+                    Кіру
+                </button>
+
+            </form>
+
+        </div>
+
+    </body>
+    </html>
+    """)
+def is_logged_in():
+    return "username" in session
+
+
+def is_librarian():
+    return session.get("role") == "librarian"
+@app.route("/logout")
+def logout():
+
+    session.clear()
+
+    return redirect(url_for("login"))
 @app.route("/")
 def home():
+
+    if "username" not in session:
+        return redirect(url_for("login"))
 
     db = get_db()
 
@@ -760,6 +905,11 @@ def books():
 @app.route("/books/add", methods=["GET", "POST"])
 def add_book():
 
+    if not is_librarian():
+        return "Бұл бөлімге тек кітапханашы кіре алады", 403
+
+    db = get_db()
+
     if request.method == "POST":
 
         kitap_id = request.form["kitap_id"]
@@ -1250,7 +1400,8 @@ def edit_loan(loan_id):
 
 @app.route("/loans/add", methods=["GET", "POST"])
 def add_loan():
-
+    if not is_librarian():
+        return "Бұл бөлімге тек кітапханашы кіре алады", 403
     db = get_db()
 
     readers = db.execute("""
