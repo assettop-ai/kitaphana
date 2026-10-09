@@ -1111,8 +1111,9 @@ def loans():
                 background: #f2f2f2;
             }
 
-            table {
+           table {
     width: 100%;
+    margin: 20px auto;
     background: white;
     border-collapse: collapse;
     table-layout: auto;
@@ -1155,7 +1156,7 @@ th, td {
 
     <body>
 
-        <h1>КІТАП БЕРУ</h1>
+        <h1 style="text-align: center;">КІТАП БЕРУ</h1>
 
         <a class="add"
            href="/loans/add">
@@ -1248,9 +1249,11 @@ th, td {
 
         <br>
 
-        <a href="/">
-            ← Басты бет
-        </a>
+       <div style="text-align: center; margin-top: 20px;">
+    <a href="/">
+        ← Басты бет
+    </a>
+</div>
 
     </body>
 
