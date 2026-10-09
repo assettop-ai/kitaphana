@@ -1164,7 +1164,7 @@ th, td {
 + КІТАП БЕРУ </a>
 {% endif %}
 
-
+<div style="width: 100%; overflow-x: auto;">
         <table>
     <tr>
         <th>ID</th>
@@ -1246,7 +1246,7 @@ th, td {
             {% endfor %}
 
         </table>
-
+</div>
         <br>
 
        <div style="text-align: center; margin-top: 20px;">
