@@ -337,18 +337,20 @@ def home():
                 margin-top: 10px;
             }
 
-            .menu {
-                max-width: 1000px;
+            
+.menu {
+    max-width: 1200px;
+    margin: 35px auto;
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 15px;
+}
 
-                margin: 35px auto;
-
-                display: grid;
-
-                grid-template-columns:
-                    repeat(auto-fit, minmax(220px, 1fr));
-
-                gap: 15px;
-            }
+.menu .button {
+    flex: 0 1 auto;
+    white-space: nowrap;
+}
 
             .button {
                 display: block;
