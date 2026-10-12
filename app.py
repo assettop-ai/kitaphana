@@ -384,19 +384,25 @@ def home():
             }
 
 
+
 .logout-area {
-    max-width: 1200px;
-    margin: -15px auto 30px;
-    text-align: right;
+    position: fixed;
+    top: 15px;
+    right: 20px;
+    z-index: 1000;
 }
 
 .logout-button {
-    font-size: 12px;
-    padding: 7px 12px;
-    min-width: auto;
-    width: auto;
     display: inline-block;
+    font-size: 13px;
+    padding: 9px 14px;
+    width: auto;
+    background: #dc3545;
+    color: white;
+    text-decoration: none;
+    border-radius: 6px;
 }
+
 
 
         </style>
