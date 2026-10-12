@@ -353,7 +353,7 @@ def home():
 }
 
             .button {
-                display: block;
+    display: inline-block;
 
                 padding: 18px;
 
@@ -382,6 +382,20 @@ def home():
             .danger {
                 color: #cc0000;
             }
+
+.logout-area {
+    max-width: 1200px;
+    margin: -15px auto 30px;
+    text-align: left;
+}
+
+.logout-button {
+    font-size: 12px;
+    padding: 7px 12px;
+    min-width: auto;
+    width: auto;
+    display: inline-block;
+}
 
         </style>
 
@@ -473,12 +487,13 @@ def home():
                 ЕСЕП
             </a>
            
-            <a class="button danger" href="/logout">
-                ЖҮЙЕДЕН ШЫҒУ
-            </a>
-
-
+           
         </div>
+        <div class="logout-area">
+    <a class="button danger logout-button" href="/logout">
+        Жүйеден шығу
+    </a>
+</div>
 
 
     </body>
