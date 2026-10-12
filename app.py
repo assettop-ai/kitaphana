@@ -1196,11 +1196,13 @@ table {
 
         <h1 style="text-align: center;">КІТАП БЕРУ</h1>
 
-        <a class="add"
-           href="/loans/add">
-           {% if session.get("role") == "librarian" %} <a class="add" href="/loans/add">
-+ КІТАП БЕРУ </a>
+        
+{% if session.get("role") == "librarian" %}
+    <a class="add" href="/loans/add">
+        + КІТАП БЕРУ
+    </a>
 {% endif %}
+
 
 
 
