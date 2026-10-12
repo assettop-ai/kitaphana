@@ -1142,6 +1142,7 @@ table {
     background: white;
     border-collapse: collapse;
     table-layout: auto;
+    box-sizing: border-box;
 }
 
 th, td {
@@ -1202,7 +1203,7 @@ table {
 {% endif %}
 
 
-<div style="width: 100%; max-width: 1600px; margin: 20px auto; overflow-x: auto;">
+<div style="width: 100%; max-width: 1600px; margin: 20px auto; overflow-x: auto; box-sizing: border-box;">
 
         <table>
     <tr>
