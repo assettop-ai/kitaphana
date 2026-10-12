@@ -1204,8 +1204,7 @@ table {
 
 
 
-<div style="width: 100%; max-width: 1600px; margin: 20px auto; padding: 0 15px; box-sizing: border-box; overflow-x: auto;">
-
+<div style="width: 100%; max-width: 1600px; margin: 20px auto; overflow-x: auto;">
         <table>
     <tr>
         <th>ID</th>
