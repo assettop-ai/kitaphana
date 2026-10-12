@@ -1202,7 +1202,16 @@ table {
 
     <body>
 
-        <h1 style="text-align: center;">КІТАП БЕРУ</h1>
+        <h1 style="
+    text-align: center;
+    color: white;
+    background: rgba(0, 0, 0, 0.75);
+    padding: 15px;
+    border-radius: 10px;
+    text-shadow: 2px 2px 4px black;
+">
+    КІТАП БЕРУ
+</h1>
 
         
 {% if session.get("role") == "librarian" %}
