@@ -133,7 +133,7 @@ def login():
         <style>
             body {
                 font-family: Arial, sans-serif;
-                background: #eaf2ff;
+                background: #eaf2ff url('/static/library-bg.jpg') center / cover fixed no-repeat;
                 display: flex;
                 justify-content: center;
                 align-items: center;
