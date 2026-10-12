@@ -383,10 +383,11 @@ def home():
                 color: #cc0000;
             }
 
+
 .logout-area {
     max-width: 1200px;
     margin: -15px auto 30px;
-    text-align: left;
+    text-align: right;
 }
 
 .logout-button {
@@ -396,6 +397,7 @@ def home():
     width: auto;
     display: inline-block;
 }
+
 
         </style>
 
