@@ -1203,7 +1203,9 @@ table {
 {% endif %}
 
 
-<div style="width: 100%; max-width: 1600px; margin: 20px auto; overflow-x: auto; box-sizing: border-box;">
+
+<div style="width: 100%; max-width: 1600px; margin: 20px auto; padding: 0 15px; box-sizing: border-box; overflow-x: auto;">
+ auto; overflow-x: auto; box-sizing: border-box;">
 
         <table>
     <tr>
