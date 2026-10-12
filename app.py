@@ -1135,7 +1135,8 @@ def loans():
                 background: #f2f2f2;
             }
 
-           table {
+          
+table {
     width: 100%;
     margin: 20px auto;
     background: white;
@@ -1143,11 +1144,14 @@ def loans():
     table-layout: auto;
 }
 
-            th, td {
-                padding: 10px;
-                border: 1px solid #ccc;
-                text-align: center;
-            }
+th, td {
+    padding: 10px;
+    border: 1px solid #ccc;
+    text-align: center;
+    white-space: normal;
+    overflow-wrap: anywhere;
+}
+
 
             th {
                 background: #eeeeee;
@@ -1174,6 +1178,15 @@ th, td {
     text-align: center;
     white-space: nowrap;
 }
+body {
+    max-width: 1600px;
+    margin: 0 auto;
+}
+
+table {
+    width: 100%;
+    margin: 20px auto;
+}
         </style>
 
     </head>
@@ -1188,7 +1201,9 @@ th, td {
 + КІТАП БЕРУ </a>
 {% endif %}
 
-<div style="width: 100%; overflow-x: auto;">
+
+<div style="width: 100%; max-width: 1600px; margin: 20px auto; overflow-x: auto;">
+
         <table>
     <tr>
         <th>ID</th>
