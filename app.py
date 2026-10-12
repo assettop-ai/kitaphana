@@ -1136,10 +1136,12 @@ def loans():
         <style>
 
             body {
-                font-family: Arial;
-                padding: 20px;
-                background: #f2f2f2;
-            }
+    font-family: Arial, sans-serif;
+    padding: 20px;
+    background: #eaf2ff url('/static/library-bg.jpg') center / cover fixed no-repeat;
+    max-width: 1600px;
+    margin: 0 auto;
+}
 
           
 table {
