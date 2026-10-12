@@ -290,15 +290,21 @@ def home():
 
             body {
                 font-family: Arial, sans-serif;
-                background: #f2f4f7;
+                background: #eaf2ff url('/static/library-bg.jpg') center / cover fixed no-repeat;
                 margin: 0;
                 padding: 20px;
             }
 
             h1 {
-                text-align: center;
-                margin-bottom: 30px;
-            }
+    text-align: center;
+    margin: 0 auto 30px;
+    max-width: 1000px;
+    color: white;
+    background: rgba(0, 0, 0, 0.75);
+    padding: 18px;
+    border-radius: 12px;
+    text-shadow: 2px 2px 4px black;
+}
 
             .cards {
                 max-width: 1000px;
