@@ -622,12 +622,15 @@ def readers():
 
         <h1>ОҚЫРМАНДАР</h1>
 
-        {% if session.get("role") == "librarian" %}
-<a class="add"
-   href="/readers/add">
-    + ОҚЫРМАН ҚОСУ
+        
+{% if session.get("role") == "librarian" %}
+<a class="add" href="/readers/add">+ ОҚЫРМАН ҚОСУ</a>
+
+<a class="add" href="/readers/import">
+    📥 EXCEL-ДЕН ЖҮКТЕУ
 </a>
 {% endif %}
+
 
         <table>
 
