@@ -677,6 +677,200 @@ def readers():
     </html>
     """, readers=readers)
 
+# =========================================================
+# ОҚЫРМАНДАРДЫ EXCEL-ДЕН ЕНГІЗУ
+# =========================================================
+
+@app.route("/readers/import", methods=["GET", "POST"])
+def import_readers():
+    if not is_librarian():
+        return "Бұл бөлімге тек кітапханашы кіре алады", 403
+
+    if request.method == "POST":
+        file = request.files.get("file")
+
+        if not file or not file.filename.lower().endswith(".xlsx"):
+            return "Excel файлын (.xlsx) таңдаңыз", 400
+
+        workbook = load_workbook(file, read_only=True, data_only=True)
+        sheet = workbook.active
+
+        rows = sheet.iter_rows(values_only=True)
+        headers = next(rows, None)
+
+        if not headers:
+            workbook.close()
+            return "Excel файлы бос", 400
+
+        def normalize(value):
+            return str(value or "").strip().lower().replace("ё", "е")
+
+        header_map = {
+            normalize(value): index
+            for index, value in enumerate(headers)
+        }
+
+        def find_column(*names):
+            for name in names:
+                if normalize(name) in header_map:
+                    return header_map[normalize(name)]
+            return None
+
+        name_col = find_column("Аты-жөні", "Аты жөні", "ФИО", "Оқырман аты-жөні")
+        class_col = find_column("Сыныбы", "Сынып", "Класс", "Пәні")
+        type_col = find_column("Түрі", "Тип", "Тип читателя")
+
+        if name_col is None:
+            workbook.close()
+            return "Excel-де «Аты-жөні» немесе «ФИО» бағаны болуы керек", 400
+
+        db = get_db()
+        added = 0
+        skipped = 0
+
+        try:
+            for row in rows:
+                if not row or name_col >= len(row):
+                    skipped += 1
+                    continue
+
+                aty = str(row[name_col] or "").strip()
+                synyp = (
+                    str(row[class_col] or "").strip()
+                    if class_col is not None and class_col < len(row)
+                    else ""
+                )
+                turi = (
+                    str(row[type_col] or "").strip()
+                    if type_col is not None and type_col < len(row)
+                    else "Оқушы"
+                )
+
+                if not aty:
+                    skipped += 1
+                    continue
+
+                if turi.lower() in ("мұғалім", "учитель", "teacher"):
+                    turi = "Мұғалім"
+                else:
+                    turi = "Оқушы"
+
+                # Бірдей аты-жөні мен сыныбы бар оқырманды қайталамау
+                if DATABASE_URL:
+                    exists = db.execute(
+                        """
+                        SELECT id FROM okuyandar
+                        WHERE LOWER(TRIM(aty)) = LOWER(TRIM(%s))
+                          AND LOWER(TRIM(COALESCE(synyp, ''))) =
+                              LOWER(TRIM(%s))
+                          AND LOWER(TRIM(COALESCE(turi, ''))) =
+                              LOWER(TRIM(%s))
+                        LIMIT 1
+                        """,
+                        (aty, synyp, turi)
+                    ).fetchone()
+                else:
+                    exists = db.execute(
+                        """
+                        SELECT id FROM okuyandar
+                        WHERE LOWER(TRIM(aty)) = LOWER(TRIM(?))
+                          AND LOWER(TRIM(COALESCE(synyp, ''))) =
+                              LOWER(TRIM(?))
+                          AND LOWER(TRIM(COALESCE(turi, ''))) =
+                              LOWER(TRIM(?))
+                        LIMIT 1
+                        """,
+                        (aty, synyp, turi)
+                    ).fetchone()
+
+                if exists:
+                    skipped += 1
+                    continue
+
+                if DATABASE_URL:
+                    db.execute(
+                        """
+                        INSERT INTO okuyandar (aty, synyp, turi)
+                        VALUES (%s, %s, %s)
+                        """,
+                        (aty, synyp, turi)
+                    )
+                else:
+                    db.execute(
+                        """
+                        INSERT INTO okuyandar (aty, synyp, turi)
+                        VALUES (?, ?, ?)
+                        """,
+                        (aty, synyp, turi)
+                    )
+
+                added += 1
+
+            db.commit()
+
+        except Exception:
+            db.rollback()
+            raise
+
+        finally:
+            db.close()
+            workbook.close()
+
+        return (
+            f"Дайын! Қосылған оқырман: {added}. "
+            f"Өткізілген жол: {skipped}. "
+            '<br><a href="/readers">Оқырмандарға қайту</a>'
+        )
+
+    return render_template_string("""
+    <!DOCTYPE html>
+    <html lang="kk">
+    <head>
+        <meta charset="UTF-8">
+        <title>Оқырмандарды Excel-ден енгізу</title>
+        <style>
+            body {
+                font-family: Arial, sans-serif;
+                background: #f1f5f9;
+                padding: 30px;
+            }
+            .card {
+                max-width: 520px;
+                margin: 30px auto;
+                padding: 28px;
+                background: white;
+                border-radius: 16px;
+                box-shadow: 0 5px 20px #0001;
+            }
+            button {
+                padding: 12px 20px;
+                background: #2563eb;
+                color: white;
+                border: 0;
+                border-radius: 8px;
+                cursor: pointer;
+            }
+            input { margin: 18px 0; }
+            a { color: #2563eb; }
+        </style>
+    </head>
+    <body>
+        <div class="card">
+            <h2>📚 Оқырмандарды жүктеу</h2>
+            <p>Excel файлының түрі: .xlsx</p>
+            <p>Қажетті бағандар: Аты-жөні, Сыныбы, Түрі.</p>
+            <form method="POST" enctype="multipart/form-data">
+                <input type="file" name="file"
+                       accept=".xlsx" required>
+                <br>
+                <button type="submit">Excel-ден енгізу</button>
+            </form>
+            <p><a href="/readers">← Оқырмандарға қайту</a></p>
+        </div>
+    </body>
+    </html>
+    """)
+
 
 # =========================================================
 # ОҚЫРМАН ҚОСУ
@@ -894,9 +1088,12 @@ def books():
         <h1>КІТАПТАР</h1>
 
         {% if session.get("role") == "librarian" %}
-<a class="add"
-   href="/books/add">
-    + КІТАП ҚОСУ
+<a class="add" href="/readers/add">
+    + ОҚЫРМАН ҚОСУ
+</a>
+
+<a class="add" href="/readers/import">
+    📥 EXCEL-ДЕН ЖҮКТЕУ
 </a>
 {% endif %}
 
