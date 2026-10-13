@@ -1,6 +1,10 @@
 from flask import Flask, request, redirect, url_for, render_template_string, session
 import sqlite3
+import os
+import re
 from datetime import date
+from openpyxl import load_workbook
+
 
 app = Flask(__name__)
 app.secret_key = "KITAPHANA_SECRET_2026"
@@ -94,7 +98,33 @@ def init_db():
             merzim TEXT
         )
     """)
+    # Кітаптың баспасы мен шыққан жылына арналған бағандар
+    if DATABASE_URL:
+        db.execute("""
+            ALTER TABLE kitaptar
+            ADD COLUMN IF NOT EXISTS baspa TEXT
+        """)
+        db.execute("""
+            ALTER TABLE kitaptar
+            ADD COLUMN IF NOT EXISTS zhyl TEXT
+        """)
+    else:
+        columns = {
+            row["name"]
+            for row in db.execute(
+                "PRAGMA table_info(kitaptar)"
+            ).fetchall()
+        }
 
+        if "baspa" not in columns:
+            db.execute(
+                "ALTER TABLE kitaptar ADD COLUMN baspa TEXT"
+            )
+
+        if "zhyl" not in columns:
+            db.execute(
+                "ALTER TABLE kitaptar ADD COLUMN zhyl TEXT"
+            )
     db.commit()
     db.close()
 
@@ -1885,6 +1915,225 @@ def report():
     this_month=this_month
     )
 
+
+# =========================================================
+# EXCEL-ДЕН КІТАПТАРДЫ ЖҮКТЕУ
+# =========================================================
+
+@app.route("/books/import", methods=["GET", "POST"])
+def import_books():
+    if not is_librarian():
+        return redirect(url_for("login"))
+
+    message = ""
+
+    if request.method == "POST":
+        file = request.files.get("file")
+
+        if not file or not file.filename:
+            message = "Excel файлын таңдаңыз."
+        elif not file.filename.lower().endswith(".xlsx"):
+            message = "Тек .xlsx форматындағы файл қабылданады."
+        else:
+            try:
+                workbook = load_workbook(
+                    file,
+                    read_only=True,
+                    data_only=True
+                )
+                sheet = workbook.active
+
+                rows = sheet.iter_rows(values_only=True)
+                headers = next(rows, None)
+
+                if not headers:
+                    message = "Excel файлы бос."
+                else:
+                    headers = [
+                        str(h).strip().lower() if h is not None else ""
+                        for h in headers
+                    ]
+
+                    def find_column(names):
+                        for name in names:
+                            if name in headers:
+                                return headers.index(name)
+                        return None
+
+                    title_col = find_column([
+                        "название книги", "атауы", "кітап атауы"
+                    ])
+                    author_col = find_column([
+                        "автор(ы)", "автор", "авторы"
+                    ])
+                    publisher_col = find_column([
+                        "издательство", "баспасы"
+                    ])
+                    year_col = find_column([
+                        "год издания", "шыққан жылы", "жылы"
+                    ])
+                    quantity_col = find_column([
+                        "количество", "саны", "жалпы саны"
+                    ])
+
+                    if None in (
+                        title_col, author_col, publisher_col,
+                        year_col, quantity_col
+                    ):
+                        message = (
+                            "Баған атаулары сәйкес емес. "
+                            "Қажетті бағандар: Название книги, "
+                            "Автор(ы), Издательство, Год издания, Количество."
+                        )
+                    else:
+                        db = get_db()
+                        added = 0
+                        skipped = 0
+
+                        existing = db.execute(
+                            "SELECT ataui, avtor, baspa, zhyl FROM kitaptar"
+                        ).fetchall()
+
+                        def clean(value):
+                            return str(value).strip() if value is not None else ""
+
+                        existing_keys = {
+                            (
+                                clean(row["ataui"]).casefold(),
+                                clean(row["avtor"]).casefold(),
+                                clean(row["baspa"]).casefold(),
+                                clean(row["zhyl"]).casefold()
+                            )
+                            for row in existing
+                        }
+
+                        max_id = db.execute(
+                            "SELECT COUNT(*) AS n FROM kitaptar"
+                        ).fetchone()["n"]
+
+                        for row in rows:
+                            title = clean(row[title_col]) if title_col < len(row) else ""
+                            author = clean(row[author_col]) if author_col < len(row) else ""
+                            publisher = clean(row[publisher_col]) if publisher_col < len(row) else ""
+                            year = clean(row[year_col]) if year_col < len(row) else ""
+                            quantity_value = row[quantity_col] if quantity_col < len(row) else 0
+
+                            if not title:
+                                skipped += 1
+                                continue
+
+                            try:
+                                quantity = int(quantity_value or 0)
+                            except (TypeError, ValueError):
+                                quantity = 0
+
+                            key = (
+                                title.casefold(),
+                                author.casefold(),
+                                publisher.casefold(),
+                                year.casefold()
+                            )
+
+                            if key in existing_keys:
+                                skipped += 1
+                                continue
+
+                            max_id += 1
+                            book_code = f"K{max_id:04d}"
+
+                            db.execute(
+                                """
+                                INSERT INTO kitaptar
+                                (kitap_id, ataui, avtor, sanat, jalpy_sany, baspa, zhyl)
+                                VALUES (%s, %s, %s, %s, %s, %s, %s)
+                                """ if DATABASE_URL else
+                                """
+                                INSERT INTO kitaptar
+                                (kitap_id, ataui, avtor, sanat, jalpy_sany, baspa, zhyl)
+                                VALUES (?, ?, ?, ?, ?, ?, ?)
+                                """,
+                                (
+                                    book_code, title, author, "",
+                                    quantity, publisher, year
+                                )
+                            )
+
+                            existing_keys.add(key)
+                            added += 1
+
+                        db.commit()
+                        db.close()
+                        workbook.close()
+
+                        message = (
+                            f"Дайын! Қосылған кітап: {added}. "
+                            f"Өткізілген жол: {skipped}."
+                        )
+
+            except Exception as e:
+                message = f"Қате пайда болды: {e}"
+
+    return render_template_string("""
+    <!doctype html>
+    <html lang="kk">
+    <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <title>Excel-ден кітап жүктеу</title>
+        <style>
+            body {
+                font-family: Arial, sans-serif;
+                max-width: 650px;
+                margin: 40px auto;
+                padding: 20px;
+                background: #f4f6f8;
+            }
+            .panel {
+                background: white;
+                padding: 25px;
+                border-radius: 12px;
+            }
+            button, .back {
+                display: inline-block;
+                padding: 11px 16px;
+                margin-top: 12px;
+                border: 0;
+                border-radius: 7px;
+                background: #1769aa;
+                color: white;
+                text-decoration: none;
+                cursor: pointer;
+            }
+            .message {
+                margin-top: 18px;
+                overflow-wrap: anywhere;
+            }
+        </style>
+    </head>
+    <body>
+        <div class="panel">
+            <h2>📚 Excel-ден кітап жүктеу</h2>
+            <p>Excel файлының бағандары:</p>
+            <p>
+                Название книги | Автор(ы) | Издательство |
+                Год издания | Количество
+            </p>
+
+            <form method="POST" enctype="multipart/form-data">
+                <input type="file" name="file" accept=".xlsx" required>
+                <br>
+                <button type="submit">Excel файлын жүктеу</button>
+            </form>
+
+            {% if message %}
+                <p class="message">{{ message }}</p>
+            {% endif %}
+
+            <a class="back" href="/books">Кітаптар тізіміне қайту</a>
+        </div>
+    </body>
+    </html>
+    """, message=message)
 
 # =========================================================
 # ІСКЕ ҚОСУ
