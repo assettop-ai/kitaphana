@@ -1994,6 +1994,7 @@ def import_books():
                             "SELECT ataui, avtor, baspa, zhyl FROM kitaptar"
                         ).fetchall()
 
+                        
                         def clean(value):
                             return str(value).strip() if value is not None else ""
 
@@ -2008,7 +2009,13 @@ def import_books():
                         }
 
                         max_id = db.execute(
-                            "SELECT COUNT(*) AS n FROM kitaptar"
+                            """
+                            SELECT COALESCE(
+                                MAX(CAST(SUBSTR(kitap_id, 2) AS INTEGER)),
+                                0
+                            ) AS n
+                            FROM kitaptar
+                            """
                         ).fetchone()["n"]
 
                         for row in rows:
@@ -2034,6 +2041,7 @@ def import_books():
                                 year.casefold()
                             )
 
+                           
                             if key in existing_keys:
                                 skipped += 1
                                 continue
@@ -2060,6 +2068,15 @@ def import_books():
 
                             existing_keys.add(key)
                             added += 1
+
+                        if DATABASE_URL:
+                            db.execute("""
+                                SELECT setval(
+                                    pg_get_serial_sequence('kitaptar', 'id'),
+                                    COALESCE((SELECT MAX(id) FROM kitaptar), 1),
+                                    true
+                                )
+                            """)
 
                         db.commit()
                         db.close()
