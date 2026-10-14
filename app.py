@@ -8,6 +8,105 @@ from openpyxl import load_workbook
 
 app = Flask(__name__)
 app.secret_key = "KITAPHANA_SECRET_2026"
+
+@app.after_request
+def add_global_navigation(response):
+    # Кіру бетінде және жүйеден шығу кезінде көрсетпейміз
+    if request.path in ("/login", "/logout"):
+        return response
+
+    # Тек жүйеге кірген пайдаланушыларға көрсетіледі
+    if "username" not in session:
+        return response
+
+    # Тек HTML беттеріне қосамыз
+    if not response.content_type or "text/html" not in response.content_type:
+        return response
+
+    html = response.get_data(as_text=True)
+
+    # Басты бетте өзіне апаратын батырма қажет емес
+    home_button = ""
+    if request.path != "/":
+        home_button = """
+        <a class="global-nav-home" href="/">
+            🏠 Басты бет
+        </a>
+        """
+
+    navigation = f"""
+    <style>
+        body {{
+            padding-top: 55px !important;
+        }}
+
+        .global-nav {{
+            position: fixed;
+            top: 12px;
+            right: 16px;
+            z-index: 99999;
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+            gap: 8px;
+            flex-wrap: wrap;
+        }}
+
+        .global-nav a {{
+            display: inline-block;
+            padding: 10px 14px;
+            border-radius: 7px;
+            text-decoration: none;
+            font-family: Arial, sans-serif;
+            font-size: 14px;
+            font-weight: bold;
+            box-shadow: 0 2px 6px #0002;
+        }}
+
+        .global-nav-home {{
+            background: #ffffff;
+            color: #222222;
+        }}
+
+        .global-nav-logout {{
+            background: #dc3545;
+            color: #ffffff;
+        }}
+
+        @media (max-width: 480px) {{
+            .global-nav {{
+                right: 8px;
+                top: 8px;
+                gap: 5px;
+            }}
+
+            .global-nav a {{
+                padding: 8px 10px;
+                font-size: 12px;
+            }}
+
+            body {{
+                padding-top: 60px !important;
+            }}
+        }}
+    </style>
+
+    <div class="global-nav">
+        {home_button}
+        <a class="global-nav-logout" href="/logout">
+            🚪 Жүйеден шығу
+        </a>
+    </div>
+    """
+
+    if "</body>" in html:
+        html = html.replace("</body>", navigation + "</body>", 1)
+    else:
+        html += navigation
+
+    response.set_data(html)
+    return response
+
 @app.route("/logout") 
 def logout(): 
     session.clear() 
@@ -526,21 +625,11 @@ def home():
             </a>
 
 
-            <a class="button"
-               href="/report">
-                ЕСЕП
-            </a>
+           
            
            
         </div>
-        <div class="logout-area">
-        <a class="button" href="/">
-    🏠 Басты бет
-</a>
-    <a class="button danger logout-button" href="/logout">
-        Жүйеден шығу
-    </a>
-</div>
+        
 
 
     </body>
