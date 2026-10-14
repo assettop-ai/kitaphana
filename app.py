@@ -670,7 +670,27 @@ def home():
     overdue=overdue
     )
 
+# ОҚЫРМАНДЫ ӨШІРУ
+@app.route("/readers/delete/<int:reader_id>", methods=["POST"])
+def delete_reader(reader_id):
+    if not is_librarian():
+        return "Бұл бөлімге тек кітапханашы кіре алады", 403
 
+    db = get_db()
+    db.execute(
+        "DELETE FROM okuyandar WHERE id = %s" if DATABASE_URL
+        else "DELETE FROM okuyandar WHERE id = ?",
+        (reader_id,)
+    )
+    db.commit()
+    db.close()
+
+    return redirect(url_for("readers"))
+
+
+# ОҚЫРМАНДАР ТІЗІМІ
+@app.route("/readers")
+def readers():
 # =========================================================
 # ОҚЫРМАНДАР
 # =========================================================
