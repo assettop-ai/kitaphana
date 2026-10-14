@@ -706,115 +706,7 @@ def readers():
 
     return render_template("readers.html", readers=readers)
     
-    <!DOCTYPE html>
-
-    <html lang="kk">
-
-    <head>
-
-        <meta charset="UTF-8">
-
-        <title>Оқырмандар</title>
-
-        <style>
-
-            body {
-                font-family: Arial;
-                padding: 20px;
-                background: #f2f2f2;
-            }
-
-            table {
-                width: 100%;
-                background: white;
-                border-collapse: collapse;
-            }
-
-            th, td {
-                padding: 10px;
-                border: 1px solid #ccc;
-                text-align: center;
-            }
-
-            th {
-                background: #eeeeee;
-            }
-
-            .add {
-                display: inline-block;
-                padding: 12px 18px;
-                background: white;
-                text-decoration: none;
-                color: black;
-                border-radius: 8px;
-                margin-bottom: 20px;
-            }
-
-        </style>
-
-    </head>
-
-    <body>
-
-        <h1>ОҚЫРМАНДАР</h1>
-
-        
-{% if session.get("role") == "librarian" %}
-<a class="add" href="/readers/add">+ ОҚЫРМАН ҚОСУ</a>
-
-<a class="add" href="/readers/import">
-    📥 EXCEL-ДЕН ЖҮКТЕУ
-</a>
-{% endif %}
-
-
-        <table>
-
-            <tr>
-
-                <th>ID</th>
-                <th>Аты-жөні</th>
-                <th>Сыныбы</th>
-                <th>Түрі</th>
-
-            </tr>
-
-            {% for reader in readers %}
-
-            <tr>
-
-                <td>
-                    {{ reader["id"] }}
-                </td>
-
-                <td>
-                    {{ reader["aty"] }}
-                </td>
-
-                <td>
-                    {{ reader["synyp"] }}
-                </td>
-
-                <td>
-                    {{ reader["turi"] }}
-                </td>
-
-            </tr>
-
-            {% endfor %}
-
-        </table>
-
-        <br>
-
-        <a href="/">
-            ← Басты бет
-        </a>
-
-    </body>
-
-    </html>
-    """, readers=readers)
+   
 
 # =========================================================
 # ОҚЫРМАНДАРДЫ EXCEL-ДЕН ЕНГІЗУ
@@ -1428,30 +1320,32 @@ def add_book():
     """)
 
 
+# =========================================================
 # КІТАП БЕРУ ЖАЗБАСЫН ӨШІРУ
+# =========================================================
+
 @app.route("/loans/delete/<int:loan_id>", methods=["POST"])
 def delete_loan(loan_id):
     if not is_librarian():
-        return "Бұл бөлімге тек кітапханашы кіре алады", 403
+        return "Тек кітапханашы өшіре алады", 403
 
     db = get_db()
-
-    if DATABASE_URL:
-        db.execute(
-            "DELETE FROM kitap_beru WHERE id = %s",
-            (loan_id,)
-        )
-    else:
-        db.execute(
-            "DELETE FROM kitap_beru WHERE id = ?",
-            (loan_id,)
-        )
-
-    db.commit()
-    db.close()
+    try:
+        if DATABASE_URL:
+            db.execute(
+                "DELETE FROM kitap_beru WHERE id = %s",
+                (loan_id,)
+            )
+        else:
+            db.execute(
+                "DELETE FROM kitap_beru WHERE id = ?",
+                (loan_id,)
+            )
+        db.commit()
+    finally:
+        db.close()
 
     return redirect(url_for("loans"))
-
 # =========================================================
 # КІТАП БЕРУ ЖАЗБАСЫН ӨШІРУ
 # =========================================================
