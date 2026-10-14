@@ -1431,6 +1431,59 @@ def add_book():
     """)
 
 
+# КІТАП БЕРУ ЖАЗБАСЫН ӨШІРУ
+@app.route("/loans/delete/<int:loan_id>", methods=["POST"])
+def delete_loan(loan_id):
+    if not is_librarian():
+        return "Бұл бөлімге тек кітапханашы кіре алады", 403
+
+    db = get_db()
+
+    if DATABASE_URL:
+        db.execute(
+            "DELETE FROM kitap_beru WHERE id = %s",
+            (loan_id,)
+        )
+    else:
+        db.execute(
+            "DELETE FROM kitap_beru WHERE id = ?",
+            (loan_id,)
+        )
+
+    db.commit()
+    db.close()
+
+    return redirect(url_for("loans"))
+
+# =========================================================
+# КІТАП БЕРУ ЖАЗБАСЫН ӨШІРУ
+# =========================================================
+
+@app.route("/loans/delete/<int:loan_id>", methods=["POST"])
+def delete_loan(loan_id):
+    if not is_librarian():
+        return "Бұл бөлімге тек кітапханашы кіре алады", 403
+
+    db = get_db()
+
+    try:
+        if DATABASE_URL:
+            db.execute(
+                "DELETE FROM kitap_beru WHERE id = %s",
+                (loan_id,)
+            )
+        else:
+            db.execute(
+                "DELETE FROM kitap_beru WHERE id = ?",
+                (loan_id,)
+            )
+
+        db.commit()
+    finally:
+        db.close()
+
+    return redirect(url_for("loans"))
+
 # =========================================================
 # КІТАП БЕРУ
 # =========================================================
@@ -1634,9 +1687,21 @@ table {
               action="/loans/return/{{ loan['id'] }}">
             <button type="submit">ҚАЙТАРУ</button>
         </form>
-    {% else %}
-        Қайтарылды
-    {% endif %}
+    
+{% else %}
+    Қайтарылды
+{% endif %}
+
+<form method="POST"
+      action="/loans/delete/{{ loan['id'] }}"
+      onsubmit="return confirm('Осы кітап беру жазбасын өшіресіз бе?')"
+      style="margin-top: 8px;">
+    <button type="submit"
+            style="background:#dc3545;color:white;padding:7px 12px;border:0;border-radius:5px;cursor:pointer;">
+        ӨШІРУ
+    </button>
+</form>
+
 </td>
 {% endif %}
 
