@@ -1091,12 +1091,12 @@ def books():
         <h1>КІТАПТАР</h1>
 
         {% if session.get("role") == "librarian" %}
-<a class="add" href="/readers/add">
-    + ОҚЫРМАН ҚОСУ
+<a class="add" href="/books/add">
+    + КІТАП ҚОСУ
 </a>
 
-<a class="add" href="/readers/import">
-    📥 EXCEL-ДЕН ЖҮКТЕУ
+<a class="add" href="/books/import">
+    📥 EXCEL-ДЕН КІТАП ЖҮКТЕУ
 </a>
 {% endif %}
 
