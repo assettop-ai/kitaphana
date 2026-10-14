@@ -534,6 +534,9 @@ def home():
            
         </div>
         <div class="logout-area">
+        <a class="button" href="/">
+    🏠 Басты бет
+</a>
     <a class="button danger logout-button" href="/logout">
         Жүйеден шығу
     </a>
