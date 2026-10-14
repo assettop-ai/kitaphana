@@ -162,14 +162,40 @@ def init_db():
     else:
         id_type = "INTEGER PRIMARY KEY AUTOINCREMENT"
 
+    
     # ОҚЫРМАНДАР
     db.execute(f"""
         CREATE TABLE IF NOT EXISTS okuyandar (
             id {id_type},
             aty TEXT NOT NULL,
             synyp TEXT,
-            turi TEXT
+            turi TEXT,
+            tirkelgen_kuni DATE
         )
+    """)
+
+    # Бұрыннан бар кестеге жаңа баған қосу
+    if DATABASE_URL:
+        db.execute("""
+            ALTER TABLE okuyandar
+            ADD COLUMN IF NOT EXISTS tirkelgen_kuni DATE
+        """)
+    else:
+        columns = [
+            row["name"]
+            for row in db.execute("PRAGMA table_info(okuyandar)").fetchall()
+        ]
+        if "tirkelgen_kuni" not in columns:
+            db.execute("""
+                ALTER TABLE okuyandar
+                ADD COLUMN tirkelgen_kuni TEXT
+            """)
+
+    # Бұрыннан жүктелген оқырмандарға оқу жылының басталу күнін беру
+    db.execute("""
+        UPDATE okuyandar
+        SET tirkelgen_kuni = '2026-09-01'
+        WHERE tirkelgen_kuni IS NULL
     """)
 
     # КІТАПТАР
@@ -183,6 +209,7 @@ def init_db():
             jalpy_sany INTEGER DEFAULT 0
         )
     """)
+
 
     # КІТАП БЕРУ
     db.execute(f"""
@@ -967,6 +994,7 @@ def import_readers():
     """)
 
 
+
 # =========================================================
 # ОҚЫРМАН ҚОСУ
 # =========================================================
@@ -975,116 +1003,80 @@ def import_readers():
 def add_reader():
     if not is_librarian():
         return "Бұл бөлімге тек кітапханашы кіре алады", 403
-    if request.method == "POST":
 
+    if request.method == "POST":
         aty = request.form["aty"]
         synyp = request.form["synyp"]
         turi = request.form["turi"]
 
         db = get_db()
 
-        db.execute("""
-            INSERT INTO okuyandar
-            (
-                aty,
-                synyp,
-                turi
-            )
-            VALUES (%s, %s, %s)
-        """, (
-            aty,
-            synyp,
-            turi
-        ))
+        try:
+            if DATABASE_URL:
+                db.execute("""
+                    INSERT INTO okuyandar
+                    (aty, synyp, turi, tirkelgen_kuni)
+                    VALUES (%s, %s, %s, %s)
+                """, (
+                    aty,
+                    synyp,
+                    turi,
+                    date.today().isoformat()
+                ))
+            else:
+                db.execute("""
+                    INSERT INTO okuyandar
+                    (aty, synyp, turi, tirkelgen_kuni)
+                    VALUES (?, ?, ?, ?)
+                """, (
+                    aty,
+                    synyp,
+                    turi,
+                    date.today().isoformat()
+                ))
 
-        db.commit()
-        db.close()
+            db.commit()
+        finally:
+            db.close()
 
         return redirect(url_for("readers"))
 
-
     return render_template_string("""
     <!DOCTYPE html>
-
     <html lang="kk">
-
     <head>
-
         <meta charset="UTF-8">
-
+        <meta name="viewport" content="width=device-width, initial-scale=1">
         <title>Оқырман қосу</title>
-
     </head>
-
     <body>
-
         <h1>ОҚЫРМАН ҚОСУ</h1>
 
         <form method="POST">
-
-            <label>
-                Аты-жөні:
-            </label>
-
+            <label>Аты-жөні:</label>
             <br>
-
-            <input
-                type="text"
-                name="aty"
-                required
-            >
-
+            <input type="text" name="aty" required>
             <br><br>
 
-
-            <label>
-                Сыныбы:
-            </label>
-
+            <label>Сыныбы:</label>
             <br>
-
-            <input
-                type="text"
-                name="synyp"
-            >
-
+            <input type="text" name="synyp">
             <br><br>
 
-
-            <label>
-                Түрі:
-            </label>
-
+            <label>Түрі:</label>
             <br>
-
-            <select name="turi">
-
-                <option value="Оқушы">
-                    Оқушы
-                </option>
-
-                <option value="Мұғалім">
-                    Мұғалім
-                </option>
-
+            <select name="turi" required>
+                <option value="Оқушы">Оқушы</option>
+                <option value="Мұғалім">Мұғалім</option>
             </select>
-
             <br><br>
 
-            <button type="submit">
-                САҚТАУ
-            </button>
-
+            <button type="submit">САҚТАУ</button>
         </form>
 
         <br>
-
-        <a href="/readers">
-            ← Оқырмандарға қайту
-        </a>
-
+        <a href="/readers">← Оқырмандарға қайту</a>
     </body>
-
     </html>
     """)
 
