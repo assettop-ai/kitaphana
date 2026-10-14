@@ -2233,36 +2233,45 @@ def import_books():
                                 quantity = int(quantity_value or 0)
                             except (TypeError, ValueError):
                                 quantity = 0
+                        
+                            key = (
+                                title.casefold(),
+                                author.casefold(),
+                                publisher.casefold(),
+                                year.casefold()
+                            )
+
+                            if key in existing_keys:
+                                skipped += 1
+                                continue
+
+                            max_id += 1
+                            book_code = f"K{max_id:04d}"
+
+                            db.execute(
+                                """
+                                INSERT INTO kitaptar
+                                (kitap_id, ataui, avtor, sanat,
+                                 jalpy_sany, baspa, zhyl)
+                                VALUES (%s, %s, %s, %s, %s, %s, %s)
+                                """ if DATABASE_URL else
+                                """
+                                INSERT INTO kitaptar
+                                (kitap_id, ataui, avtor, sanat,
+                                 jalpy_sany, baspa, zhyl)
+                                VALUES (?, ?, ?, ?, ?, ?, ?)
+                                """,
+                                (
+                                    book_code, title, author, "",
+                                    quantity, publisher, year
+                                )
+                            )
+
+                            existing_keys.add(key)
+                            added += 1
 
                             
-key = (
-    title.casefold(),
-    author.casefold(),
-    publisher.casefold(),
-    year.casefold()
-)
 
-max_id += 1
-book_code = f"K{max_id:04d}"
-
-db.execute(
-    """
-    INSERT INTO kitaptar
-    (kitap_id, ataui, avtor, sanat, jalpy_sany, baspa, zhyl)
-    VALUES (%s, %s, %s, %s, %s, %s, %s)
-    """ if DATABASE_URL else
-    """
-    INSERT INTO kitaptar
-    (kitap_id, ataui, avtor, sanat, jalpy_sany, baspa, zhyl)
-    VALUES (?, ?, ?, ?, ?, ?, ?)
-    """,
-    (
-        book_code, title, author, "",
-        quantity, publisher, year
-    )
-)
-
-added += 1
 
                          
                         if DATABASE_URL:
