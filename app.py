@@ -688,27 +688,24 @@ def delete_reader(reader_id):
     return redirect(url_for("readers"))
 
 
-# ОҚЫРМАНДАР ТІЗІМІ
-@app.route("/readers")
-def readers():
 # =========================================================
 # ОҚЫРМАНДАР
 # =========================================================
 
 @app.route("/readers")
 def readers():
-
     db = get_db()
+    try:
+        readers = db.execute("""
+            SELECT *
+            FROM okuyandar
+            ORDER BY id DESC
+        """).fetchall()
+    finally:
+        db.close()
 
-    readers = db.execute("""
-        SELECT *
-        FROM okuyandar
-        ORDER BY id DESC
-    """).fetchall()
-
-    db.close()
-
-    return render_template_string("""
+    return render_template("readers.html", readers=readers)
+    
     <!DOCTYPE html>
 
     <html lang="kk">
