@@ -1784,86 +1784,55 @@ def edit_loan(loan_id):
 # КІТАП БЕРУ — ҚОСУ
 # =========================================================
 
+
 @app.route("/loans/add", methods=["GET", "POST"])
 def add_loan():
     if not is_librarian():
         return "Бұл бөлімге тек кітапханашы кіре алады", 403
+
     db = get_db()
 
     readers = db.execute("""
-        SELECT *
-        FROM okuyandar
+        SELECT * FROM okuyandar
         ORDER BY aty
     """).fetchall()
 
     books = db.execute("""
-        SELECT *
-        FROM kitaptar
+        SELECT * FROM kitaptar
         ORDER BY ataui
     """).fetchall()
 
     if request.method == "POST":
-
         okuyman_id = request.form["okuyman_id"]
         kitap_id = request.form["kitap_id"]
+        kuni = request.form["kuni"]
         merzim = request.form["merzim"]
+
+        if not kuni:
+            db.close()
+            return "Кітап берілген күнді таңдаңыз", 400
 
         if DATABASE_URL:
             db.execute("""
                 INSERT INTO kitap_beru
                 (
-                    kuni,
-                    okuyman_id,
-                    kitap_id,
-                    berildi,
-                    kaitaryldy,
-                    kaitaru_kuni,
-                    merzim
+                    kuni, okuyman_id, kitap_id,
+                    berildi, kaitaryldy, kaitaru_kuni, merzim
                 )
-                VALUES
-                (
-                    %s,
-                    %s,
-                    %s,
-                    'Иә',
-                    'Жоқ',
-                    '',
-                    %s
-                )
+                VALUES (%s, %s, %s, 'Иә', 'Жоқ', '', %s)
             """, (
-                date.today().isoformat(),
-                okuyman_id,
-                kitap_id,
-                merzim
+                kuni, okuyman_id, kitap_id, merzim
             ))
-
         else:
             db.execute("""
                 INSERT INTO kitap_beru
                 (
-                    kuni,
-                    okuyman_id,
-                    kitap_id,
-                    berildi,
-                    kaitaryldy,
-                    kaitaru_kuni,
-                    merzim
+                    kuni, okuyman_id, kitap_id,
+                    berildi, kaitaryldy, kaitaru_kuni, merzim
                 )
-                VALUES
-                (
-                    ?,
-                    ?,
-                    ?,
-                    'Иә',
-                    'Жоқ',
-                    '',
-                    ?
-                )
+                VALUES (?, ?, ?, 'Иә', 'Жоқ', '', ?)
             """, (
-                date.today().isoformat(),
-                okuyman_id,
-                kitap_id,
-                merzim
+                kuni, okuyman_id, kitap_id, merzim
             ))
 
         db.commit()
@@ -1874,41 +1843,64 @@ def add_loan():
     db.close()
 
     return render_template_string("""
-    <h2>Кітап беру</h2>
+    <!DOCTYPE html>
+    <html lang="kk">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <title>Кітап беру</title>
+    </head>
+    <body>
+        <h2>КІТАП БЕРУ</h2>
 
-    <form method="post">
+        <form method="post">
+            <label>Оқырман:</label>
+            <br>
+            <select name="okuyman_id" required>
+                {% for reader in readers %}
+                    <option value="{{ reader.id }}">
+                        {{ reader.aty }} — {{ reader.synyp }}
+                    </option>
+                {% endfor %}
+            </select>
 
-        <label>Оқырман:</label>
-        <select name="okuyman_id" required>
-            {% for reader in readers %}
-                <option value="{{ reader.id }}">
-                    {{ reader.aty }} — {{ reader.synyp }}
-                </option>
-            {% endfor %}
-        </select>
+            <br><br>
 
-        <br><br>
+            <label>Кітап:</label>
+            <br>
+            <select name="kitap_id" required>
+                {% for book in books %}
+                    <option value="{{ book.id }}">
+                        {{ book.ataui }}
+                    </option>
+                {% endfor %}
+            </select>
 
-        <label>Кітап:</label>
-        <select name="kitap_id" required>
-            {% for book in books %}
-                <option value="{{ book.id }}">
-                    {{ book.ataui }}
-                </option>
-            {% endfor %}
-        </select>
+            <br><br>
 
-        <br><br>
+            <label>Кітап берілген күні:</label>
+            <br>
+            <input type="date" name="kuni"
+                   value="2026-09-01" required>
 
-        <label>Мерзімі:</label>
-        <input type="date" name="merzim" required>
+            <br><br>
 
-        <br><br>
+            <label>Қайтару мерзімі:</label>
+            <br>
+            <input type="date" name="merzim"
+                   value="2026-09-14" required>
 
-        <button type="submit">Кітап беру</button>
+            <br><br>
 
-    </form>
+            <button type="submit">Кітап беру</button>
+        </form>
+
+        <br>
+        <a href="/loans">← Кітап беру тізіміне қайту</a>
+    </body>
+    </html>
     """, readers=readers, books=books)
+
 # =========================================================
 # ЕСЕП
 # =========================================================
