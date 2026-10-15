@@ -207,6 +207,30 @@ def init_db():
                 "ALTER TABLE kitaptar ADD COLUMN zhyl TEXT"
             )
     db.commit()
+
+    # МҰҒАЛІМДЕРДІ personal_fio.xlsx ФАЙЛЫНАН АВТОМАТТЫ ТҮРДЕ КӨШІРУ
+    teachers_file = "personal_fio.xlsx"
+    if os.path.exists(teachers_file):
+        # Бұрынғы мұғалімдерді өшіреміз (дубликат болмас үшін)
+        db.execute("DELETE FROM okuyandar WHERE turi = 'Мұғалім'")
+        db.commit()
+
+        df_t = pd.read_excel(teachers_file)
+        for _, row in df_t.iterrows():
+            fio = str(row.get('ФИО') or f"{row.get('Фамилия', '')} {row.get('Имя', '')} {row.get('Отчество', '')}").strip()
+            if fio and fio != "nan nan nan":
+                if DATABASE_URL:
+                    db.execute("""
+                        INSERT INTO okuyandar (aty, synyp, turi, tirkelgen_kuni)
+                        VALUES (%s, '/мұғалім', 'Мұғалім', %s)
+                    """, (fio, '2026-09-01'))
+                else:
+                    db.execute("""
+                        INSERT INTO okuyandar (aty, synyp, turi, tirkelgen_kuni)
+                        VALUES (?, '/мұғалім', 'Мұғалім', ?)
+                    """, (fio, '2026-09-01'))
+        db.commit()
+
     db.close()
 
 @app.route("/login", methods=["GET", "POST"])
@@ -484,7 +508,6 @@ def loans():
         return redirect(url_for("login"))
     db = get_db()
     
-    # Жаңа кітап беруді тіркеу
     if request.method == "POST" and is_librarian():
         okuyman_id = request.form.get("okuyman_id")
         kitap_id = request.form.get("kitap_id")
@@ -505,7 +528,6 @@ def loans():
             db.commit()
         return redirect(url_for("loans"))
 
-    # Берілген кітаптар тізімін алу
     loans_list = db.execute("""
         SELECT kb.id, kb.kuni, kb.merzim, kb.kaitaryldy,
                ok.aty as okuyhan_aty, ok.synyp, ok.turi,
@@ -690,7 +712,7 @@ def readers():
         </style>
     </head>
     <body>
-        <h1>👥 Оқырмандар тізімі</h1>
+        <h1>👥 Оқырмандар тізімі (Мұғалімдер қосылған)</h1>
         {% if session.get("role") == "librarian" %}
             <a class="btn" href="/readers/add">+ Оқырман қосу</a>
             <a class="btn" href="/readers/import">📥 Excel-ден жүктеу</a>
