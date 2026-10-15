@@ -442,8 +442,9 @@ def home():
             <a class="button" href="/readers">ОҚЫРМАНДАР</a>
             <a class="button" href="/books">КІТАПТАР</a>
             <a class="button" href="/loans">КІТАП БЕРУ</a>
-            <a class="button" href="/rating">🏆 Оқырмандар рейтингі</a>
-            <a class="button" href="/book-rating">📚 Кітаптар рейтингі</a>
+            <a class="button" href="/rating">👨‍🎓 Оқушылар рейтингісі</a>
+            <a class="button" href="/teacher-rating">👩‍🏫 Мұғалімдер рейтингісі</a>
+            <a class="button" href="/book-rating">📚 Кітаптар рейтингісі</a>
             <a class="button" href="/report">📊 ЕСЕП</a>
         </div>
     </body>
@@ -632,6 +633,8 @@ def import_readers():
 # ОҚЫРМАН ҚОСУ
 @app.route("/readers/add", methods=["GET", "POST"])
 def add_reader():
+    if DATABASE_URL:
+        pass
     if not is_librarian():
         return "Бұл бөлімге тек кітапханашы кіре алады", 403
     if request.method == "POST":
@@ -1057,6 +1060,8 @@ def add_loan():
         kitap_id = request.form["kitap_id"]
         kuni = request.form["kuni"]
         merzim = request.form["merzim"]
+        if DATABASE_URL:
+            pass
         if not kuni:
             db.close()
             return "Кітап берілген күнді таңдаңыз", 400
@@ -1453,15 +1458,13 @@ def reset_readers():
     """
 
 # =========================================================
-# 3. ОҚЫРМАНДАР МЕН МҰҒАЛІМДЕРДІҢ РЕЙТИНГІ (/rating)
+# 3. ОҚУШЫЛАР РЕЙТИНГІСІ (/rating)
 # =========================================================
 @app.route("/rating")
 def rating():
     if not is_logged_in():
         return redirect(url_for("login"))
     db = get_db()
-    
-    # Оқушылардың рейтингі
     top_students = db.execute("""
         SELECT 
             okuyandar.aty, 
@@ -1474,8 +1477,59 @@ def rating():
         ORDER BY oxylgan_kitap_sany DESC
         LIMIT 20
     """).fetchall()
+    db.close()
+    
+    return render_template_string("""
+    <!DOCTYPE html>
+    <html lang="kk">
+    <head>
+        <meta charset="UTF-8">
+        <title>Оқушылар рейтингісі</title>
+        <style>
+            body { font-family: Arial, sans-serif; background: #f2f2f2; padding: 20px; max-width: 900px; margin: auto; }
+            h1 { text-align: center; color: #1e3a8a; }
+            table { width: 100%; background: white; border-collapse: collapse; margin-top: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+            th, td { padding: 12px; border: 1px solid #ccc; text-align: center; }
+            th { background: #2563eb; color: white; }
+            tr:nth-child(even) { background: #f9f9f9; }
+            .back { display: block; text-align: center; margin-top: 30px; font-size: 18px; text-decoration: none; color: #2563eb; }
+        </style>
+    </head>
+    <body>
+        <h1>👨‍🎓 Оқушылар рейтингісі</h1>
+        <table>
+            <tr>
+                <th>Орын</th>
+                <th>Аты-жөні</th>
+                <th>Сыныбы</th>
+                <th>Оқыған кітап саны</th>
+            </tr>
+            {% for r in top_students %}
+            <tr>
+                <td><b>{{ loop.index }}</b></td>
+                <td>{{ r['aty'] }}</td>
+                <td>{{ r['synyp'] }}</td>
+                <td>{{ r['oxylgan_kitap_sany'] }}</td>
+            </tr>
+            {% else %}
+            <tr>
+                <td colspan="4">Әзірге деректер жоқ</td>
+            </tr>
+            {% endfor %}
+        </table>
+        <a class="back" href="/">← Басты бетке қайту</a>
+    </body>
+    </html>
+    """, top_students=top_students)
 
-    # Мұғалімдердің рейтингі
+# =========================================================
+# МҰҒАЛІМДЕР РЕЙТИНГІСІ (/teacher-rating)
+# =========================================================
+@app.route("/teacher-rating")
+def teacher_rating():
+    if not is_logged_in():
+        return redirect(url_for("login"))
+    db = get_db()
     top_teachers = db.execute("""
         SELECT 
             okuyandar.aty, 
@@ -1488,7 +1542,6 @@ def rating():
         ORDER BY oxylgan_kitap_sany DESC
         LIMIT 20
     """).fetchall()
-
     db.close()
     
     return render_template_string("""
@@ -1496,82 +1549,46 @@ def rating():
     <html lang="kk">
     <head>
         <meta charset="UTF-8">
-        <title>Кітап оқу рейтингі</title>
+        <title>Мұғалімдер рейтингісі</title>
         <style>
-            body { font-family: Arial, sans-serif; background: #f2f2f2; padding: 20px; max-width: 1300px; margin: auto; }
-            h1 { text-align: center; margin-bottom: 30px; }
-            .container { display: flex; flex-wrap: wrap; gap: 30px; justify-content: center; }
-            .column { flex: 1; min-width: 450px; background: white; padding: 20px; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
-            h2 { text-align: center; color: #1e3a8a; margin-top: 0; }
-            table { width: 100%; border-collapse: collapse; margin-top: 15px; }
-            th, td { padding: 10px; border: 1px solid #ccc; text-align: center; }
+            body { font-family: Arial, sans-serif; background: #f2f2f2; padding: 20px; max-width: 900px; margin: auto; }
+            h1 { text-align: center; color: #1e3a8a; }
+            table { width: 100%; background: white; border-collapse: collapse; margin-top: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+            th, td { padding: 12px; border: 1px solid #ccc; text-align: center; }
             th { background: #2563eb; color: white; }
             tr:nth-child(even) { background: #f9f9f9; }
             .back { display: block; text-align: center; margin-top: 30px; font-size: 18px; text-decoration: none; color: #2563eb; }
         </style>
     </head>
     <body>
-        <h1>🏆 Кітап оқу рейтингі</h1>
-
-        <div class="container">
-            <!-- Оқушылар бөлімі -->
-            <div class="column">
-                <h2>👨‍🎓 Оқушылар рейтингі</h2>
-                <table>
-                    <tr>
-                        <th>Орын</th>
-                        <th>Аты-жөні</th>
-                        <th>Сыныбы</th>
-                        <th>Оқыған кітап</th>
-                    </tr>
-                    {% for r in top_students %}
-                    <tr>
-                        <td><b>{{ loop.index }}</b></td>
-                        <td>{{ r['aty'] }}</td>
-                        <td>{{ r['synyp'] }}</td>
-                        <td>{{ r['oxylgan_kitap_sany'] }}</td>
-                    </tr>
-                    {% else %}
-                    <tr>
-                        <td colspan="4">Әзірге деректер жоқ</td>
-                    </tr>
-                    {% endfor %}
-                </table>
-            </div>
-
-            <!-- Мұғалімдер бөлімі -->
-            <div class="column">
-                <h2>👩‍🏫 Мұғалімдер рейтингі</h2>
-                <table>
-                    <tr>
-                        <th>Орын</th>
-                        <th>Аты-жөні</th>
-                        <th>Қызметі / Сыныбы</th>
-                        <th>Оқыған кітап</th>
-                    </tr>
-                    {% for t in top_teachers %}
-                    <tr>
-                        <td><b>{{ loop.index }}</b></td>
-                        <td>{{ t['aty'] }}</td>
-                        <td>{{ t['synyp'] }}</td>
-                        <td>{{ t['oxylgan_kitap_sany'] }}</td>
-                    </tr>
-                    {% else %}
-                    <tr>
-                        <td colspan="4">Әзірге деректер жоқ</td>
-                    </tr>
-                    {% endfor %}
-                </table>
-            </div>
-        </div>
-
+        <h1>👩‍🏫 Мұғалімдер рейтингісі</h1>
+        <table>
+            <tr>
+                <th>Орын</th>
+                <th>Аты-жөні</th>
+                <th>Қызметі / Сыныбы</th>
+                <th>Оқыған кітап саны</th>
+            </tr>
+            {% for t in top_teachers %}
+            <tr>
+                <td><b>{{ loop.index }}</b></td>
+                <td>{{ t['aty'] }}</td>
+                <td>{{ t['synyp'] }}</td>
+                <td>{{ t['oxylgan_kitap_sany'] }}</td>
+            </tr>
+            {% else %}
+            <tr>
+                <td colspan="4">Әзірге деректер жоқ</td>
+            </tr>
+            {% endfor %}
+        </table>
         <a class="back" href="/">← Басты бетке қайту</a>
     </body>
     </html>
-    """, top_students=top_students, top_teachers=top_teachers)
+    """, top_teachers=top_teachers)
 
 # =========================================================
-# 4. ЕҢ КӨП БЕРІЛГЕН КІТАПТАР РЕЙТИНГІ (/book-rating)
+# 4. ЕҢ КӨП БЕРІЛГЕН КІТАПТАР РЕЙТИНГІСІ (/book-rating)
 # =========================================================
 @app.route("/book-rating")
 def book_rating():
@@ -1596,7 +1613,7 @@ def book_rating():
     <html lang="kk">
     <head>
         <meta charset="UTF-8">
-        <title>Ең көп берілген кітаптар рейтингі</title>
+        <title>Ең көп берілген кітаптар рейтингісі</title>
         <style>
             body { font-family: Arial, sans-serif; background: #f2f2f2; padding: 20px; max-width: 900px; margin: auto; }
             h1 { text-align: center; }
@@ -1608,7 +1625,7 @@ def book_rating():
         </style>
     </head>
     <body>
-        <h1>📚 Ең көп сұранысқа ие кітаптар рейтингі</h1>
+        <h1>📚 Ең көп сұранысқа ие кітаптар рейтингісі</h1>
         <table>
             <tr>
                 <th>Орын</th>
