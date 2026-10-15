@@ -460,7 +460,6 @@ def home():
                 <a class="button" href="/readers">👥 Оқырмандар</a>
                 <a class="button" href="/books">📚 Кітаптар</a>
                 <a class="button" href="/loans">🔄 Кітап беру</a>
-                <a class="button" href="/auto-fill-loans" style="background: #10b981; color: white;">🚀 176 Кітапты Авто-бөлу</a>
                 <a class="button" href="/rating">👨‍🎓 Оқушылар рейтингісі</a>
                 <a class="button" href="/teacher-rating">👩‍🏫 Мұғалімдер рейтингісі</a>
                 <a class="button" href="/book-rating">🥇 Кітаптар рейтингісі</a>
@@ -477,120 +476,175 @@ def home():
     )
 
 # =========================================================
-# МҰҒАЛІМДЕРДІ ЖАҢАРТУ ЖӘНЕ 176 КІТАПТЫ АВТО-БӨЛУ СКРИПТІ
+# КІТАП БЕРУ (LOANS) БӨЛІМІ
 # =========================================================
-@app.route("/auto-fill-loans")
-def auto_fill_loans():
+@app.route("/loans", methods=["GET", "POST"])
+def loans():
+    if not is_logged_in():
+        return redirect(url_for("login"))
+    db = get_db()
+    
+    # Жаңа кітап беруді тіркеу
+    if request.method == "POST" and is_librarian():
+        okuyman_id = request.form.get("okuyman_id")
+        kitap_id = request.form.get("kitap_id")
+        kuni = request.form.get("kuni") or date.today().isoformat()
+        merzim = request.form.get("merzim") or (date.fromisoformat(kuni) + timedelta(days=14)).isoformat()
+        
+        if okuyman_id and kitap_id:
+            if DATABASE_URL:
+                db.execute("""
+                    INSERT INTO kitap_beru (kuni, okuyman_id, kitap_id, berildi, kaitaryldy, kaitaru_kuni, merzim)
+                    VALUES (%s, %s, %s, 'Иә', 'Жоқ', '', %s)
+                """, (kuni, okuyman_id, kitap_id, merzim))
+            else:
+                db.execute("""
+                    INSERT INTO kitap_beru (kuni, okuyman_id, kitap_id, berildi, kaitaryldy, kaitaru_kuni, merzim)
+                    VALUES (?, ?, ?, 'Иә', 'Жоқ', '', ?)
+                """, (kuni, okuyman_id, kitap_id, merzim))
+            db.commit()
+        return redirect(url_for("loans"))
+
+    # Берілген кітаптар тізімін алу
+    loans_list = db.execute("""
+        SELECT kb.id, kb.kuni, kb.merzim, kb.kaitaryldy,
+               ok.aty as okuyhan_aty, ok.synyp, ok.turi,
+               k.ataui as kitap_ataui, k.kitap_id
+        FROM kitap_beru kb
+        JOIN okuyandar ok ON kb.okuyman_id = ok.id
+        JOIN kitaptar k ON kb.kitap_id = k.id
+        ORDER BY kb.id DESC
+    """).fetchall()
+
+    readers_list = db.execute("""
+        SELECT id, aty, synyp, turi FROM okuyandar
+        WHERE (synyp NOT LIKE '0%' AND synyp != '0' AND LOWER(synyp) NOT LIKE '%даярлық%')
+           OR turi = 'Мұғалім'
+        ORDER BY aty ASC
+    """).fetchall()
+
+    books_list = db.execute("SELECT id, ataui, kitap_id FROM kitaptar ORDER BY ataui ASC").fetchall()
+    db.close()
+
+    return render_template_string("""
+    <!DOCTYPE html>
+    <html lang="kk">
+    <head>
+        <meta charset="UTF-8">
+        <title>Кітап беру</title>
+        <style>
+            body { font-family: Arial; padding: 20px; background: #f2f2f2; max-width: 1200px; margin: auto; }
+            table { width: 100%; background: white; border-collapse: collapse; margin-top: 20px; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 8px #0001; }
+            th, td { padding: 10px; border: 1px solid #ddd; text-align: center; font-size: 14px; }
+            th { background: #2563eb; color: white; }
+            tr:nth-child(even) { background: #f9f9f9; }
+            .form-box { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 8px #0001; margin-bottom: 25px; }
+            select, input { padding: 8px; margin: 5px 0 15px 0; width: 100%; max-width: 400px; display: block; border: 1px solid #ccc; border-radius: 6px; }
+            button { padding: 10px 18px; background: #2563eb; color: white; border: 0; border-radius: 6px; cursor: pointer; font-weight: bold; }
+        </style>
+    </head>
+    <body>
+        <h1>🔄 Кітап беру және қайтару</h1>
+        
+        {% if session.get("role") == "librarian" %}
+        <div class="form-box">
+            <h3>+ Жаңа кітап беру</h3>
+            <form method="POST">
+                <label>Оқырманды таңдаңыз:</label>
+                <select name="okuyman_id" required>
+                    <option value="">-- Таңдаңыз --</option>
+                    {% for r in readers_list %}
+                        <option value="{{ r['id'] }}">{{ r['aty'] }} ({{ r['synyp'] }})</option>
+                    {% endfor %}
+                </select>
+
+                <label>Кітапты таңдаңыз:</label>
+                <select name="kitap_id" required>
+                    <option value="">-- Таңдаңыз --</option>
+                    {% for b in books_list %}
+                        <option value="{{ b['id'] }}">{{ b['ataui'] }} (ID: {{ b['kitap_id'] }})</option>
+                    {% endfor %}
+                </select>
+
+                <label>Берілген күні:</label>
+                <input type="date" name="kuni" value="{{ today }}">
+
+                <label>Қайтару мерзімі:</label>
+                <input type="date" name="merzim" value="{{ default_merzim }}">
+
+                <button type="submit">Кітапты беру</button>
+            </form>
+        </div>
+        {% endif %}
+
+        <h3>Берілген кітаптар тізімі</h3>
+        <table>
+            <tr>
+                <th>ID</th>
+                <th>Оқырман</th>
+                <th>Сыныбы / Қызметі</th>
+                <th>Кітап атауы</th>
+                <th>Берілген күні</th>
+                <th>Мерзімі</th>
+                <th>Қайтарылды ма?</th>
+                <th>Әрекет</th>
+            </tr>
+            {% for l in loans_list %}
+            <tr>
+                <td>{{ l['id'] }}</td>
+                <td>{{ l['okuyhan_aty'] }}</td>
+                <td>{{ l['synyp'] }}</td>
+                <td>{{ l['kitap_ataui'] }}</td>
+                <td>{{ l['kuni'] }}</td>
+                <td>{{ l['merzim'] }}</td>
+                <td>{{ l['kaitaryldy'] }}</td>
+                <td>
+                    {% if session.get("role") == "librarian" and l['kaitaryldy'] == 'Жоқ' %}
+                        <form method="POST" action="/loans/return/{{ l['id'] }}" style="margin:0;">
+                            <button type="submit" style="background:#10b981; padding:5px 10px; font-size:12px;">Қайтарылды</button>
+                        </form>
+                    {% else %}
+                        <span>Аяқталды</span>
+                    {% endif %}
+                </td>
+            </tr>
+            {% endfor %}
+        </table>
+        <br>
+        <a href="/" style="color: #2563eb; font-weight: bold; text-decoration: none;">← Басты бетке қайту</a>
+    </body>
+    </html>
+    """,
+    loans_list=loans_list,
+    readers_list=readers_list,
+    books_list=books_list,
+    today=date.today().isoformat(),
+    default_merzim=(date.today() + timedelta(days=14)).isoformat()
+    )
+
+@app.route("/loans/return/<int:loan_id>", methods=["POST"])
+def return_book(loan_id):
     if not is_librarian():
         return "Бұл бөлімге тек кітапханашы кіре алады", 403
     db = get_db()
-    
-    # 1. 0-сыныптарды өшіру
-    db.execute("""
-        DELETE FROM okuyandar 
-        WHERE turi = 'Оқушы' 
-          AND (synyp LIKE '0%' OR synyp = '0' OR LOWER(synyp) LIKE '%даярлық%')
-    """)
-    db.commit()
-
-    # 2. Дерекқордағы барлық бұрынғы мұғалімдерді толығымен өшіру
-    db.execute("DELETE FROM okuyandar WHERE turi = 'Мұғалім'")
-    db.commit()
-
-    # 3. Жаңа мұғалімдер тізімін (personal_fio.xlsx немесе арнайы файлдан) /мұғалім сыныбымен қосу
-    # Егер файл серверде тұрса немесе жүктелсе, содан оқимыз
-    teachers_file = "personal_fio.xlsx"
-    added_teachers_count = 0
-    if os.path.exists(teachers_file):
-        df_t = pd.read_excel(teachers_file)
-        for _, row in df_t.iterrows():
-            # ФИО құрастыру
-            fio = str(row.get('ФИО') or f"{row.get('Фамилия', '')} {row.get('Имя', '')} {row.get('Отчество', '')}").strip()
-            if fio and fio != "nan nan nan":
-                if DATABASE_URL:
-                    db.execute("""
-                        INSERT INTO okuyandar (aty, synyp, turi, tirkelgen_kuni)
-                        VALUES (%s, '/мұғалім', 'Мұғалім', %s)
-                    """, (fio, date.today().isoformat()))
-                else:
-                    db.execute("""
-                        INSERT INTO okuyandar (aty, synyp, turi, tirkelgen_kuni)
-                        VALUES (?, '/мұғалім', 'Мұғалім', ?)
-                    """, (fio, date.today().isoformat()))
-                added_teachers_count += 1
-        db.commit()
-
-    # Оқушылар мен жаңартылған мұғалімдерді алу
-    students = db.execute("""
-        SELECT id, aty, synyp FROM okuyandar 
-        WHERE turi = 'Оқушы' 
-          AND synyp NOT LIKE '0%' 
-          AND synyp != '0'
-          AND LOWER(synyp) NOT LIKE '%даярлық%'
-    """).fetchall()
-    
-    teachers = db.execute("SELECT id, aty, synyp FROM okuyandar WHERE turi = 'Мұғалім'").fetchall()
-    books = db.execute("SELECT id, ataui, sanat FROM kitaptar").fetchall()
-    
-    if not books:
-        db.close()
-        return "Қате: Дерекқорда кітаптар жоқ. Алдымен кітаптарды жүктеңіз!", 400
-
-    start_d = date(2026, 9, 1)
-    end_d = date.today()
-    workdays = []
-    curr = start_d
-    while curr <= end_d:
-        if curr.weekday() < 5:  # Дүйсенбі - Жұма
-            workdays.append(curr.isoformat())
-        curr += timedelta(days=1)
-        
-    if not workdays:
-        workdays = [date(2026, 9, 1).isoformat()]
-
-    # Бұрынғы берілістерді өшіріп, дәл 176 кітап беру логикасын іске қосамыз
-    db.execute("DELETE FROM kitap_beru")
-    db.commit()
-
-    added_count = 0
-    target_book_limit = 176  # Талап етілген дәл 176 кітап лимиті
-
-    book_index = 0
-    while added_count < target_book_limit and books:
-        bk = books[book_index % len(books)]
-        book_index += 1
-        
-        all_readers = students + teachers
-        if not all_readers:
-            break
-        reader = all_readers[added_count % len(all_readers)]
-        
-        k_date = workdays[added_count % len(workdays)]
-        m_date = (date.fromisoformat(k_date) + timedelta(days=14)).isoformat()
-        
-        if DATABASE_URL:
-            db.execute("""
-                INSERT INTO kitap_beru (kuni, okuyman_id, kitap_id, berildi, kaitaryldy, kaitaru_kuni, merzim)
-                VALUES (%s, %s, %s, 'Иә', 'Жоқ', '', %s)
-            """, (k_date, reader["id"], bk["id"], m_date))
-        else:
-            db.execute("""
-                INSERT INTO kitap_beru (kuni, okuyman_id, kitap_id, berildi, kaitaryldy, kaitaru_kuni, merzim)
-                VALUES (?, ?, ?, 'Иә', 'Жоқ', '', ?)
-            """, (k_date, reader["id"], bk["id"], m_date))
-        added_count += 1
-
+    today_str = date.today().isoformat()
+    if DATABASE_URL:
+        db.execute("""
+            UPDATE kitap_beru 
+            SET kaitaryldy = 'Иә', kaitaru_kuni = %s 
+            WHERE id = %s
+        """, (today_str, loan_id))
+    else:
+        db.execute("""
+            UPDATE kitap_beru 
+            SET kaitaryldy = 'Иә', kaitaru_kuni = ? 
+            WHERE id = ?
+        """, (today_str, loan_id))
     db.commit()
     db.close()
-    
-    return f"""
-    <h2>Сәтті орындалды!</h2>
-    <p>Бұрынғы мұғалімдер толығымен өшіріліп, орнына жаңа тізімнен <b>{added_teachers_count}</b> мұғалім <b>/мұғалім</b> сыныбымен қосылды.</p>
-    <p>Бұрынғы берілістер тазартылып, талап етілгендей дәл <b>{added_count} кітап (176 кітап лимиті)</b> оқырмандар мен мұғалімдерге үлестірілді.</p>
-    <a href="/loans">Кітап беру тізіміне көшу</a> | <a href="/readers">Оқырмандар тізімі</a>
-    """
+    return redirect(url_for("loans"))
 
-# ОҚЫРМАНДАРДЫ БАСҚАРУ ЖӘНЕ КӨРСЕТУ
+# ОҚЫРМАНДАР БӨЛІМІ
 @app.route("/readers/delete/<int:reader_id>", methods=["POST"])
 def delete_reader(reader_id):
     if not is_librarian():
@@ -636,7 +690,7 @@ def readers():
         </style>
     </head>
     <body>
-        <h1>👥 Оқырмандар тізімі (Мұғалімдер /мұғалім болып жаңартылды)</h1>
+        <h1>👥 Оқырмандар тізімі</h1>
         {% if session.get("role") == "librarian" %}
             <a class="btn" href="/readers/add">+ Оқырман қосу</a>
             <a class="btn" href="/readers/import">📥 Excel-ден жүктеу</a>
@@ -672,210 +726,6 @@ def readers():
     </body>
     </html>
     """, readers=readers)
-
-@app.route("/readers/import", methods=["GET", "POST"])
-def import_readers():
-    if not is_librarian():
-        return "Бұл бөлімге тек кітапханашы кіре алады", 403
-    if request.method == "POST":
-        file = request.files.get("file")
-        if not file or not file.filename.lower().endswith(".xlsx"):
-            return "Excel файлын (.xlsx) таңдаңыз", 400
-        workbook = load_workbook(file, read_only=True, data_only=True)
-        sheet = workbook.active
-        rows = sheet.iter_rows(values_only=True)
-        headers = next(rows, None)
-        if not headers:
-            workbook.close()
-            return "Excel файлы бос", 400
-        def normalize(value):
-            return str(value or "").strip().lower().replace("ё", "е")
-        header_map = {
-            normalize(value): index
-            for index, value in enumerate(headers)
-        }
-        def find_column(*names):
-            for name in names:
-                if normalize(name) in header_map:
-                    return header_map[normalize(name)]
-            return None
-        name_col = find_column("Аты-жөні", "Аты жөні", "ФИО", "Оқырман аты-жөні")
-        class_col = find_column("Сыныбы", "Сынып", "Класс", "Пәні")
-        type_col = find_column("Түрі", "Тип", "Тип читателя")
-        if name_col is None:
-            workbook.close()
-            return "Excel-де «Аты-жөні» немесе «ФИО» бағаны болуы керек", 400
-        db = get_db()
-        added = 0
-        skipped = 0
-        try:
-            for row in rows:
-                if not row or name_col >= len(row):
-                    skipped += 1
-                    continue
-                aty = str(row[name_col] or "").strip()
-                synyp = (
-                    str(row[class_col] or "").strip()
-                    if class_col is not None and class_col < len(row)
-                    else ""
-                )
-                turi = (
-                    str(row[type_col] or "").strip()
-                    if type_col is not None and type_col < len(row)
-                    else "Оқушы"
-                )
-                if not aty:
-                    skipped += 1
-                    continue
-                if turi.lower() in ("мұғалім", "учитель", "teacher"):
-                    turi = "Мұғалім"
-                    synyp = "/мұғалім"
-                else:
-                    turi = "Оқушы"
-                
-                if turi == "Оқушы" and (synyp.startswith("0") or synyp == "0" or "даярлық" in synyp.lower()):
-                    skipped += 1
-                    continue
-
-                if DATABASE_URL:
-                    exists = db.execute(
-                        """
-                        SELECT id FROM okuyandar
-                        WHERE LOWER(TRIM(aty)) = LOWER(TRIM(%s))
-                          AND LOWER(TRIM(COALESCE(synyp, ''))) = LOWER(TRIM(%s))
-                          AND LOWER(TRIM(COALESCE(turi, ''))) = LOWER(TRIM(%s))
-                        LIMIT 1
-                        """,
-                        (aty, synyp, turi)
-                    ).fetchone()
-                else:
-                    exists = db.execute(
-                        """
-                        SELECT id FROM okuyandar
-                        WHERE LOWER(TRIM(aty)) = LOWER(TRIM(?))
-                          AND LOWER(TRIM(COALESCE(synyp, ''))) = LOWER(TRIM(?))
-                          AND LOWER(TRIM(COALESCE(turi, ''))) = LOWER(TRIM(?))
-                        LIMIT 1
-                        """,
-                        (aty, synyp, turi)
-                    ).fetchone()
-                if exists:
-                    skipped += 1
-                    continue
-                if DATABASE_URL:
-                    db.execute(
-                        """
-                        INSERT INTO okuyandar (aty, synyp, turi)
-                        VALUES (%s, %s, %s)
-                        """,
-                        (aty, synyp, turi)
-                    )
-                else:
-                    db.execute(
-                        """
-                        INSERT INTO okuyandar (aty, synyp, turi)
-                        VALUES (?, ?, ?)
-                        """,
-                        (aty, synyp, turi)
-                    )
-                added += 1
-            db.commit()
-        except Exception:
-            db.rollback()
-            raise
-        finally:
-            db.close()
-            workbook.close()
-        return (
-            f"Дайын! Қосылған оқырман: {added}. "
-            f"Өткізілген/ескерілмеген жол: {skipped}. "
-            '<br><a href="/readers">Оқырмандарға қайту</a>'
-        )
-    return render_template_string("""
-    <!DOCTYPE html>
-    <html lang="kk">
-    <head>
-        <meta charset="UTF-8">
-        <title>Оқырмандарды Excel-ден енгізу</title>
-        <style>
-            body { font-family: Arial, sans-serif; background: #f1f5f9; padding: 30px; }
-            .card { max-width: 520px; margin: 30px auto; padding: 28px; background: white; border-radius: 16px; box-shadow: 0 5px 20px #0001; }
-            button { padding: 12px 20px; background: #2563eb; color: white; border: 0; border-radius: 8px; cursor: pointer; }
-            input { margin: 18px 0; }
-            a { color: #2563eb; }
-        </style>
-    </head>
-    <body>
-        <div class="card">
-            <h2>📚 Оқырмандарды жүктеу</h2>
-            <p>Excel файлының түрі: .xlsx</p>
-            <form method="POST" enctype="multipart/form-data">
-                <input type="file" name="file" accept=".xlsx" required>
-                <br>
-                <button type="submit">Excel-ден енгізу</button>
-            </form>
-            <p><a href="/readers">← Оқырмандарға қайту</a></p>
-        </div>
-    </body>
-    </html>
-    """)
-
-@app.route("/readers/add", methods=["GET", "POST"])
-def add_reader():
-    if not is_librarian():
-        return "Бұл бөлімге тек кітапханашы кіре алады", 403
-    if request.method == "POST":
-        aty = request.form["aty"]
-        synyp = request.form["synyp"]
-        turi = request.form["turi"]
-        if turi == "Мұғалім":
-            synyp = "/мұғалім"
-        if turi == "Оқушы" and (synyp.startswith("0") or synyp == "0" or "даярлық" in synyp.lower()):
-            return "Қате: 0-сынып оқушыларын қосуға болмайды!", 400
-        db = get_db()
-        try:
-            if DATABASE_URL:
-                db.execute("""
-                    INSERT INTO okuyandar
-                    (aty, synyp, turi, tirkelgen_kuni)
-                    VALUES (%s, %s, %s, %s)
-                """, (aty, synyp, turi, date.today().isoformat()))
-            else:
-                db.execute("""
-                    INSERT INTO okuyandar
-                    (aty, synyp, turi, tirkelgen_kuni)
-                    VALUES (?, ?, ?, ?)
-                """, (aty, synyp, turi, date.today().isoformat()))
-            db.commit()
-        finally:
-            db.close()
-        return redirect(url_for("readers"))
-    return render_template_string("""
-    <!DOCTYPE html>
-    <html lang="kk">
-    <head>
-        <meta charset="UTF-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1">
-        <title>Оқырман қосу</title>
-    </head>
-    <body>
-        <h1>ОҚЫРМАН ҚОСУ</h1>
-        <form method="POST">
-            <label>Аты-жөні:</label><br>
-            <input type="text" name="aty" required><br><br>
-            <label>Сыныбы (Мұғалім үшін автоматты түрде /мұғалім болады):</label><br>
-            <input type="text" name="synyp" required><br><br>
-            <label>Түрі:</label><br>
-            <select name="turi" required>
-                <option value="Оқушы">Оқушы</option>
-                <option value="Мұғалім">Мұғалім</option>
-            </select><br><br>
-            <button type="submit">САҚТАУ</button>
-        </form><br>
-        <a href="/readers">← Оқырмандарға қайту</a>
-    </body>
-    </html>
-    """)
 
 if __name__ == '__main__':
     init_db()
