@@ -1411,6 +1411,199 @@ def reset_readers():
     <p><a href="/readers">Артқа қайту</a></p>
     """
 
+@app.route("/rating")
+def rating():
+    if not is_logged_in():
+        return redirect(url_for("login"))
+
+    db = get_db()
+
+    try:
+        # Оқырмандар рейтингі: барлық берілген кітап саны
+        readers_rating = db.execute("""
+            SELECT
+                okuyandar.aty AS reader_name,
+                okuyandar.synyp AS reader_class,
+                okuyandar.turi AS reader_type,
+                COUNT(kitap_beru.id) AS book_count
+            FROM okuyandar
+            JOIN kitap_beru
+                ON kitap_beru.okuyman_id = okuyandar.id
+            WHERE kitap_beru.berildi = 'Иә'
+            GROUP BY
+                okuyandar.id,
+                okuyandar.aty,
+                okuyandar.synyp,
+                okuyandar.turi
+            ORDER BY book_count DESC, reader_name ASC
+            LIMIT 10
+        """).fetchall()
+
+        # Кітаптар рейтингі: неше рет берілгені
+        books_rating = db.execute("""
+            SELECT
+                kitaptar.ataui AS book_title,
+                kitaptar.avtor AS author,
+                COUNT(kitap_beru.id) AS book_count
+            FROM kitaptar
+            JOIN kitap_beru
+                ON kitap_beru.kitap_id = kitaptar.id
+            WHERE kitap_beru.berildi = 'Иә'
+            GROUP BY
+                kitaptar.id,
+                kitaptar.ataui,
+                kitaptar.avtor
+            ORDER BY book_count DESC, book_title ASC
+            LIMIT 10
+        """).fetchall()
+
+    finally:
+        db.close()
+
+    return render_template_string("""
+    <!DOCTYPE html>
+    <html lang="kk">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport"
+              content="width=device-width, initial-scale=1">
+        <title>Кітап оқу рейтингі</title>
+        <style>
+            body {
+                font-family: Arial, sans-serif;
+                background: #f1f5f9;
+                padding: 20px;
+                margin: 0;
+            }
+            h1 {
+                text-align: center;
+                color: #1e3a5f;
+            }
+            h2 {
+                color: #1e3a5f;
+                margin-top: 30px;
+            }
+            .table-wrap {
+                overflow-x: auto;
+                background: white;
+                border-radius: 10px;
+                padding: 10px;
+                margin-bottom: 25px;
+            }
+            table {
+                width: 100%;
+                border-collapse: collapse;
+            }
+            th, td {
+                padding: 12px;
+                border-bottom: 1px solid #ddd;
+                text-align: left;
+            }
+            th {
+                background: #dbeafe;
+            }
+            .number {
+                font-weight: bold;
+                color: #166534;
+                text-align: center;
+            }
+            .back {
+                display: inline-block;
+                padding: 12px 18px;
+                background: #2563eb;
+                color: white;
+                text-decoration: none;
+                border-radius: 8px;
+            }
+            .empty {
+                text-align: center;
+                padding: 18px;
+                color: #666;
+            }
+        </style>
+    </head>
+    <body>
+        <h1>🏆 КІТАП ОҚУ РЕЙТИНГІ</h1>
+
+        <h2>🥇 Ең көп кітап алған оқырмандар — ТОП 10</h2>
+        <div class="table-wrap">
+            <table>
+                <tr>
+                    <th>Орын</th>
+                    <th>Оқырман</th>
+                    <th>Сыныбы</th>
+                    <th>Түрі</th>
+                    <th>Берілген кітап</th>
+                </tr>
+                {% for reader in readers_rating %}
+                <tr>
+                    <td>
+                        {% if loop.index == 1 %}🥇
+                        {% elif loop.index == 2 %}🥈
+                        {% elif loop.index == 3 %}🥉
+                        {% else %}{{ loop.index }}
+                        {% endif %}
+                    </td>
+                    <td>{{ reader["reader_name"] }}</td>
+                    <td>{{ reader["reader_class"] or "—" }}</td>
+                    <td>{{ reader["reader_type"] or "—" }}</td>
+                    <td class="number">{{ reader["book_count"] }}</td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="5" class="empty">
+                        Әзірге кітап беру деректері жоқ.
+                    </td>
+                </tr>
+                {% endfor %}
+            </table>
+        </div>
+
+        <h2>📚 Ең көп берілген кітаптар — ТОП 10</h2>
+        <div class="table-wrap">
+            <table>
+                <tr>
+                    <th>Орын</th>
+                    <th>Кітап атауы</th>
+                    <th>Автор</th>
+                    <th>Берілген реті</th>
+                </tr>
+                {% for book in books_rating %}
+                <tr>
+                    <td>
+                        {% if loop.index == 1 %}🥇
+                        {% elif loop.index == 2 %}🥈
+                        {% elif loop.index == 3 %}🥉
+                        {% else %}{{ loop.index }}
+                        {% endif %}
+                    </td>
+                    <td>{{ book["book_title"] }}</td>
+                    <td>{{ book["author"] or "—" }}</td>
+                    <td class="number">{{ book["book_count"] }}</td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="4" class="empty">
+                        Әзірге кітап беру деректері жоқ.
+                    </td>
+                </tr>
+                {% endfor %}
+            </table>
+        </div>
+
+        <p style="text-align:center">
+            <a class="back" href="/">← Басты бетке қайту</a>
+        </p>
+    </body>
+    </html>
+    """,
+    readers_rating=readers_rating,
+    books_rating=books_rating
+    )
+
+
+
+
 init_db()
 
 if __name__ == "__main__":
