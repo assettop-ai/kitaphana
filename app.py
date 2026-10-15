@@ -1613,24 +1613,22 @@ def teacher_rating():
     """, all_teachers=all_teachers)
 
 # =========================================================
-# 4. ЕҢ КӨП БЕРІЛГЕН КІТАПТАР РЕЙТИНГІСІ (/book-rating)
+# 4. БАРЛЫҚ КІТАПТАР РЕЙТИНГІСІ (/book-rating) - БАРЛЫҚ КІТАПТАР
 # =========================================================
 @app.route("/book-rating")
 def book_rating():
     if not is_logged_in():
         return redirect(url_for("login"))
     db = get_db()
-    top_books = db.execute("""
+    all_books = db.execute("""
         SELECT 
             kitaptar.ataui, 
             kitaptar.avtor, 
             COUNT(kitap_beru.id) AS berilgen_sany
-        FROM kitap_beru
-        JOIN kitaptar ON kitap_beru.kitap_id = kitaptar.id
-        WHERE kitap_beru.berildi = 'Иә'
+        FROM kitaptar
+        LEFT JOIN kitap_beru ON kitaptar.id = kitap_beru.kitap_id AND kitap_beru.berildi = 'Иә'
         GROUP BY kitaptar.id, kitaptar.ataui, kitaptar.avtor
-        ORDER BY berilgen_sany DESC
-        LIMIT 20
+        ORDER BY berilgen_sany DESC, kitaptar.ataui ASC
     """).fetchall()
     db.close()
     return render_template_string("""
@@ -1638,19 +1636,23 @@ def book_rating():
     <html lang="kk">
     <head>
         <meta charset="UTF-8">
-        <title>Ең көп берілген кітаптар рейтингісі</title>
+        <title>Кітаптар рейтингісі</title>
         <style>
-            body { font-family: Arial, sans-serif; background: #f2f2f2; padding: 20px; max-width: 900px; margin: auto; }
-            h1 { text-align: center; }
-            table { width: 100%; background: white; border-collapse: collapse; margin-top: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
-            th, td { padding: 12px; border: 1px solid #ccc; text-align: center; }
+            body { font-family: Arial, sans-serif; background: #f2f2f2; padding: 20px; max-width: 950px; margin: auto; }
+            h1 { text-align: center; color: #15803d; }
+            table { width: 100%; background: white; border-collapse: collapse; margin-top: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); border-radius: 10px; overflow: hidden; }
+            th, td { padding: 12px; border: 1px solid #ddd; text-align: center; }
             th { background: #16a34a; color: white; }
             tr:nth-child(even) { background: #f9f9f9; }
-            .back { display: block; text-align: center; margin-top: 30px; font-size: 18px; text-decoration: none; color: #2563eb; }
+            tr:hover { background: #f1f5f9; }
+            .top-1 { background-color: #fef08a !important; font-weight: bold; }
+            .top-2 { background-color: #e2e8f0 !important; font-weight: bold; }
+            .top-3 { background-color: #fed7aa !important; font-weight: bold; }
+            .back { display: block; text-align: center; margin-top: 30px; font-size: 18px; text-decoration: none; color: #2563eb; font-weight: bold; }
         </style>
     </head>
     <body>
-        <h1>📚 Ең көп сұранысқа ие кітаптар рейтингісі</h1>
+        <h1>📚 Кітаптар рейтингісі</h1>
         <table>
             <tr>
                 <th>Орын</th>
@@ -1658,19 +1660,23 @@ def book_rating():
                 <th>Авторы</th>
                 <th>Берілген реті</th>
             </tr>
-            {% for b in top_books %}
-            <tr>
+            {% for b in all_books %}
+            <tr class="{% if loop.index == 1 %}top-1{% elif loop.index == 2 %}top-2{% elif loop.index == 3 %}top-3{% endif %}">
                 <td><b>{{ loop.index }}</b></td>
                 <td>{{ b['ataui'] }}</td>
                 <td>{{ b['avtor'] }}</td>
-                <td>{{ b['berilgen_sany'] }}</td>
+                <td><b>{{ b['berilgen_sany'] }}</b></td>
+            </tr>
+            {% else %}
+            <tr>
+                <td colspan="4">Әзірге деректер жоқ</td>
             </tr>
             {% endfor %}
         </table>
         <a class="back" href="/">← Басты бетке қайту</a>
     </body>
     </html>
-    """, top_books=top_books)
+    """, all_books=all_books)
 
 # =========================================================
 # 5. ДЕРЕКҚОРДЫ ІСКЕ ҚОСУ
