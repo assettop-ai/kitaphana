@@ -480,7 +480,7 @@ def home():
     )
 
 # =========================================================
-# АВТОМАТТЫ ТҮРДЕ 180 ОҚУШЫ ЖӘНЕ 53 МҰҒАЛІМГЕ КІТАП БЕРУ СКРИПТІ
+# АВТОМАТТЫ ТҮРДЕ 180 ОҚУШЫ ЖӘНЕ 53 МҰҒАЛІМГЕ КІТАП БЕРУ СКРИПТІ (0-СЫНЫПТАРДЫ ҚОСПАЙДЫ)
 # =========================================================
 @app.route("/auto-fill-loans")
 def auto_fill_loans():
@@ -488,8 +488,15 @@ def auto_fill_loans():
         return "Бұл бөлімге тек кітапханашы кіре алады", 403
     db = get_db()
     
-    # 1. Барлық оқушылар мен мұғалімдерді бөліп алу
-    students = db.execute("SELECT id FROM okuyandar WHERE turi = 'Оқушы'").fetchall()
+    # 1. 0-сыныптан басқа оқушылар мен мұғалімдерді бөліп алу
+    students = db.execute("""
+        SELECT id FROM okuyandar 
+        WHERE turi = 'Оқушы' 
+          AND synyp NOT LIKE '0%' 
+          AND synyp != '0'
+          AND LOWER(synyp) NOT LIKE '%даярлық%'
+    """).fetchall()
+    
     teachers = db.execute("SELECT id FROM okuyandar WHERE turi = 'Мұғалім'").fetchall()
     books = db.execute("SELECT id FROM kitaptar").fetchall()
     
@@ -497,13 +504,13 @@ def auto_fill_loans():
         db.close()
         return "Қате: Дерекқорда кітаптар жоқ. Алдымен кітаптарды жүктеңіз!", 400
 
-    # 2. 2026 жылдың 1 қыркүйегінен бүгінгі күнге дейінгі жұмыс күндерін (сенбі-жексенбісіз) жинау
+    # 2. 2026 жылдың 1 қыркүйегінен бүгінгі күнге дейінгі жұмыс күндерін жинау
     start_d = date(2026, 9, 1)
     end_d = date.today()
     workdays = []
     curr = start_d
     while curr <= end_d:
-        if curr.weekday() < 5:  # 0-ден 4-ке дейін (Дүйсенбі - Жұма)
+        if curr.weekday() < 5:  # Дүйсенбі - Жұма
             workdays.append(curr.isoformat())
         curr += timedelta(days=1)
         
@@ -518,7 +525,6 @@ def auto_fill_loans():
             st = students[i % len(students)]
             bk = books[i % len(books)]
             k_date = workdays[i % len(workdays)]
-            # Мерзімі 14 күннен соң
             m_date = (date.fromisoformat(k_date) + timedelta(days=14)).isoformat()
             
             if DATABASE_URL:
@@ -558,7 +564,7 @@ def auto_fill_loans():
     
     return f"""
     <h2>Сәтті орындалды!</h2>
-    <p>Қыркүйек айынан бері (сенбі-жексенбісіз) <b>180 оқушы</b> мен <b>53 мұғалімге</b> барлығы <b>{added_count}</b> кітап беру жазбасы қосылды.</p>
+    <p>0-сыныптар ескерілмей, 180 оқушы мен 53 мұғалімге қыркүйек айынан бергі жұмыс күндері бойынша барлығы <b>{added_count}</b> кітап беру жазбасы қосылды.</p>
     <a href="/loans">Кітап беру тізіміне көшу</a> | <a href="/">Басты бетке қайту</a>
     """
 
@@ -1368,8 +1374,6 @@ def report():
 # =========================================================
 @app.route("/books/import", methods=["GET", "POST"])
 def import_books():
-    if DATABASE_URL is not None:
-        pass
     if not is_librarian():
         return redirect(url_for("login"))
     message = ""
@@ -1562,7 +1566,7 @@ def reset_readers():
     """
 
 # =========================================================
-# 3. ОҚУШЫЛАР РЕЙТИНГІСІ (/rating) - БАРЛЫҚ ОҚУШЫЛАР
+# 3. ОҚУШЫЛАР РЕЙТИНГІСІ (/rating) - 0-СЫНЫПТАРДЫ ҚОСПАҒАНДА
 # =========================================================
 @app.route("/rating")
 def rating():
@@ -1577,6 +1581,9 @@ def rating():
         FROM okuyandar
         LEFT JOIN kitap_beru ON okuyandar.id = kitap_beru.okuyman_id AND kitap_beru.berildi = 'Иә'
         WHERE okuyandar.turi = 'Оқушы'
+          AND okuyandar.synyp NOT LIKE '0%' 
+          AND okuyandar.synyp != '0'
+          AND LOWER(okuyandar.synyp) NOT LIKE '%даярлық%'
         GROUP BY okuyandar.id, okuyandar.aty, okuyandar.synyp
         ORDER BY oxylgan_kitap_sany DESC, okuyandar.aty ASC
     """).fetchall()
@@ -1630,7 +1637,7 @@ def rating():
     """, all_students=all_students)
 
 # =========================================================
-# МҰҒАЛІМДЕР РЕЙТИНГІСІ (/teacher-rating) - БАРЛЫҚ МҰҒАЛІМДЕР
+# МҰҒАЛІМДЕР РЕЙТИНГІСІ (/teacher-rating)
 # =========================================================
 @app.route("/teacher-rating")
 def teacher_rating():
@@ -1698,7 +1705,7 @@ def teacher_rating():
     """, all_teachers=all_teachers)
 
 # =========================================================
-# 4. БАРЛЫҚ КІТАПТАР РЕЙТИНГІСІ (/book-rating) - БАРЛЫҚ КІТАПТАР
+# 4. БАРЛЫҚ КІТАПТАР РЕЙТИНГІСІ (/book-rating)
 # =========================================================
 @app.route("/book-rating")
 def book_rating():
@@ -1734,7 +1741,7 @@ def book_rating():
             .top-2 { background-color: #e2e8f0 !important; font-weight: bold; }
             .top-3 { background-color: #fed7aa !important; font-weight: bold; }
             .back { display: block; text-align: center; margin-top: 30px; font-size: 18px; text-decoration: none; color: #2563eb; font-weight: bold; }
-        </style>
+            </style>
     </head>
     <body>
         <h1>📚 Кітаптар рейтингісі</h1>
