@@ -1477,24 +1477,23 @@ def reset_readers():
     """
 
 # =========================================================
-# 3. ОҚУШЫЛАР РЕЙТИНГІСІ (/rating)
+# 3. ОҚУШЫЛАР РЕЙТИНГІСІ (/rating) - БАРЛЫҚ ОҚУШЫЛАР
 # =========================================================
 @app.route("/rating")
 def rating():
     if not is_logged_in():
         return redirect(url_for("login"))
     db = get_db()
-    top_students = db.execute("""
+    all_students = db.execute("""
         SELECT 
             okuyandar.aty, 
             okuyandar.synyp, 
             COUNT(kitap_beru.id) AS oxylgan_kitap_sany
-        FROM kitap_beru
-        JOIN okuyandar ON kitap_beru.okuyman_id = okuyandar.id
-        WHERE kitap_beru.berildi = 'Иә' AND okuyandar.turi = 'Оқушы'
+        FROM okuyandar
+        LEFT JOIN kitap_beru ON okuyandar.id = kitap_beru.okuyman_id AND kitap_beru.berildi = 'Иә'
+        WHERE okuyandar.turi = 'Оқушы'
         GROUP BY okuyandar.id, okuyandar.aty, okuyandar.synyp
-        ORDER BY oxylgan_kitap_sany DESC
-        LIMIT 20
+        ORDER BY oxylgan_kitap_sany DESC, okuyandar.aty ASC
     """).fetchall()
     db.close()
     
@@ -1505,13 +1504,17 @@ def rating():
         <meta charset="UTF-8">
         <title>Оқушылар рейтингісі</title>
         <style>
-            body { font-family: Arial, sans-serif; background: #f2f2f2; padding: 20px; max-width: 900px; margin: auto; }
+            body { font-family: Arial, sans-serif; background: #f2f2f2; padding: 20px; max-width: 950px; margin: auto; }
             h1 { text-align: center; color: #1e3a8a; }
-            table { width: 100%; background: white; border-collapse: collapse; margin-top: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
-            th, td { padding: 12px; border: 1px solid #ccc; text-align: center; }
+            table { width: 100%; background: white; border-collapse: collapse; margin-top: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); border-radius: 10px; overflow: hidden; }
+            th, td { padding: 12px; border: 1px solid #ddd; text-align: center; }
             th { background: #2563eb; color: white; }
             tr:nth-child(even) { background: #f9f9f9; }
-            .back { display: block; text-align: center; margin-top: 30px; font-size: 18px; text-decoration: none; color: #2563eb; }
+            tr:hover { background: #f1f5f9; }
+            .top-1 { background-color: #fef08a !important; font-weight: bold; }
+            .top-2 { background-color: #e2e8f0 !important; font-weight: bold; }
+            .top-3 { background-color: #fed7aa !important; font-weight: bold; }
+            .back { display: block; text-align: center; margin-top: 30px; font-size: 18px; text-decoration: none; color: #2563eb; font-weight: bold; }
         </style>
     </head>
     <body>
@@ -1523,12 +1526,12 @@ def rating():
                 <th>Сыныбы</th>
                 <th>Оқыған кітап саны</th>
             </tr>
-            {% for r in top_students %}
-            <tr>
+            {% for r in all_students %}
+            <tr class="{% if loop.index == 1 %}top-1{% elif loop.index == 2 %}top-2{% elif loop.index == 3 %}top-3{% endif %}">
                 <td><b>{{ loop.index }}</b></td>
                 <td>{{ r['aty'] }}</td>
                 <td>{{ r['synyp'] }}</td>
-                <td>{{ r['oxylgan_kitap_sany'] }}</td>
+                <td><b>{{ r['oxylgan_kitap_sany'] }}</b></td>
             </tr>
             {% else %}
             <tr>
@@ -1539,27 +1542,26 @@ def rating():
         <a class="back" href="/">← Басты бетке қайту</a>
     </body>
     </html>
-    """, top_students=top_students)
+    """, all_students=all_students)
 
 # =========================================================
-# МҰҒАЛІМДЕР РЕЙТИНГІСІ (/teacher-rating)
+# МҰҒАЛІМДЕР РЕЙТИНГІСІ (/teacher-rating) - БАРЛЫҚ МҰҒАЛІМДЕР
 # =========================================================
 @app.route("/teacher-rating")
 def teacher_rating():
     if not is_logged_in():
         return redirect(url_for("login"))
     db = get_db()
-    top_teachers = db.execute("""
+    all_teachers = db.execute("""
         SELECT 
             okuyandar.aty, 
             okuyandar.synyp, 
             COUNT(kitap_beru.id) AS oxylgan_kitap_sany
-        FROM kitap_beru
-        JOIN okuyandar ON kitap_beru.okuyman_id = okuyandar.id
-        WHERE kitap_beru.berildi = 'Иә' AND okuyandar.turi = 'Мұғалім'
+        FROM okuyandar
+        LEFT JOIN kitap_beru ON okuyandar.id = kitap_beru.okuyman_id AND kitap_beru.berildi = 'Иә'
+        WHERE okuyandar.turi = 'Мұғалім'
         GROUP BY okuyandar.id, okuyandar.aty, okuyandar.synyp
-        ORDER BY oxylgan_kitap_sany DESC
-        LIMIT 20
+        ORDER BY oxylgan_kitap_sany DESC, okuyandar.aty ASC
     """).fetchall()
     db.close()
     
@@ -1570,13 +1572,17 @@ def teacher_rating():
         <meta charset="UTF-8">
         <title>Мұғалімдер рейтингісі</title>
         <style>
-            body { font-family: Arial, sans-serif; background: #f2f2f2; padding: 20px; max-width: 900px; margin: auto; }
+            body { font-family: Arial, sans-serif; background: #f2f2f2; padding: 20px; max-width: 950px; margin: auto; }
             h1 { text-align: center; color: #1e3a8a; }
-            table { width: 100%; background: white; border-collapse: collapse; margin-top: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
-            th, td { padding: 12px; border: 1px solid #ccc; text-align: center; }
+            table { width: 100%; background: white; border-collapse: collapse; margin-top: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); border-radius: 10px; overflow: hidden; }
+            th, td { padding: 12px; border: 1px solid #ddd; text-align: center; }
             th { background: #2563eb; color: white; }
             tr:nth-child(even) { background: #f9f9f9; }
-            .back { display: block; text-align: center; margin-top: 30px; font-size: 18px; text-decoration: none; color: #2563eb; }
+            tr:hover { background: #f1f5f9; }
+            .top-1 { background-color: #fef08a !important; font-weight: bold; }
+            .top-2 { background-color: #e2e8f0 !important; font-weight: bold; }
+            .top-3 { background-color: #fed7aa !important; font-weight: bold; }
+            .back { display: block; text-align: center; margin-top: 30px; font-size: 18px; text-decoration: none; color: #2563eb; font-weight: bold; }
         </style>
     </head>
     <body>
@@ -1588,12 +1594,12 @@ def teacher_rating():
                 <th>Қызметі / Сыныбы</th>
                 <th>Оқыған кітап саны</th>
             </tr>
-            {% for t in top_teachers %}
-            <tr>
+            {% for t in all_teachers %}
+            <tr class="{% if loop.index == 1 %}top-1{% elif loop.index == 2 %}top-2{% elif loop.index == 3 %}top-3{% endif %}">
                 <td><b>{{ loop.index }}</b></td>
                 <td>{{ t['aty'] }}</td>
                 <td>{{ t['synyp'] }}</td>
-                <td>{{ t['oxylgan_kitap_sany'] }}</td>
+                <td><b>{{ t['oxylgan_kitap_sany'] }}</b></td>
             </tr>
             {% else %}
             <tr>
@@ -1604,7 +1610,7 @@ def teacher_rating():
         <a class="back" href="/">← Басты бетке қайту</a>
     </body>
     </html>
-    """, top_teachers=top_teachers)
+    """, all_teachers=all_teachers)
 
 # =========================================================
 # 4. ЕҢ КӨП БЕРІЛГЕН КІТАПТАР РЕЙТИНГІСІ (/book-rating)
