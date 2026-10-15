@@ -104,6 +104,9 @@ USERS = {
 }
 DB_NAME = "kitaphana.db"
 
+# =========================================================
+# ДЕРЕКҚОРҒА ҚОСЫЛУ
+# =========================================================
 DATABASE_URL = os.environ.get("DATABASE_URL")
 
 def get_db():
@@ -118,6 +121,9 @@ def get_db():
     db.row_factory = sqlite3.Row
     return db
 
+# =========================================================
+# ДЕРЕКҚОРДЫ ҚҰРУ
+# =========================================================
 def init_db():
     db = get_db()
     if DATABASE_URL:
@@ -125,6 +131,7 @@ def init_db():
     else:
         id_type = "INTEGER PRIMARY KEY AUTOINCREMENT"
     
+    # ОҚЫРМАНДАР
     db.execute(f"""
         CREATE TABLE IF NOT EXISTS okuyandar (
             id {id_type},
@@ -154,6 +161,7 @@ def init_db():
         SET tirkelgen_kuni = '2026-09-01'
         WHERE tirkelgen_kuni IS NULL
     """)
+    # КІТАПТАР
     db.execute(f"""
         CREATE TABLE IF NOT EXISTS kitaptar (
             id {id_type},
@@ -164,6 +172,7 @@ def init_db():
             jalpy_sany INTEGER DEFAULT 0
         )
     """)
+    # КІТАП БЕРУ
     db.execute(f"""
         CREATE TABLE IF NOT EXISTS kitap_beru (
             id {id_type},
@@ -203,6 +212,9 @@ def init_db():
     db.commit()
     db.close()
 
+# =========================================================
+# БАСТЫ БЕТ
+# =========================================================
 @app.route("/login", methods=["GET", "POST"])
 def login():
     error = ""
@@ -426,14 +438,14 @@ def home():
                 <div class="number danger">{{ overdue }}</div>
             </div>
         </div>
-        
-<div class="menu">
-    <a class="button" href="/readers">ОҚЫРМАНДАР</a>
-    <a class="button" href="/books">КІТАПТАР</a>
-    <a class="button" href="/loans">КІТАП БЕРУ</a>
-    <a class="button" href="/rating">🏆 КІТАП ОҚУ РЕЙТИНГІ</a>
-</div>
-
+        <div class="menu">
+            <a class="button" href="/readers">ОҚЫРМАНДАР</a>
+            <a class="button" href="/books">КІТАПТАР</a>
+            <a class="button" href="/loans">КІТАП БЕРУ</a>
+            <a class="button" href="/rating">🏆 Оқырмандар рейтингі</a>
+            <a class="button" href="/book-rating">📚 Кітаптар рейтингі</a>
+            <a class="button" href="/report">📊 ЕСЕП</a>
+        </div>
     </body>
     </html>
     """,
@@ -443,6 +455,7 @@ def home():
     overdue=overdue
     )
 
+# ОҚЫРМАНДЫ ӨШІРУ
 @app.route("/readers/delete/<int:reader_id>", methods=["POST"])
 def delete_reader(reader_id):
     if not is_librarian():
@@ -457,8 +470,11 @@ def delete_reader(reader_id):
     db.close()
     return redirect(url_for("readers"))
 
+# ОҚЫРМАНДАР
 @app.route("/readers")
 def readers():
+    if not is_logged_in():
+        return redirect(url_for("login"))
     db = get_db()
     try:
         readers = db.execute("""
@@ -470,6 +486,7 @@ def readers():
         db.close()
     return render_template("readers.html", readers=readers)
 
+# ОҚЫРМАНДАРДЫ EXCEL-ДЕН ЕНГІЗУ
 @app.route("/readers/import", methods=["GET", "POST"])
 def import_readers():
     if not is_librarian():
@@ -612,6 +629,7 @@ def import_readers():
     </html>
     """)
 
+# ОҚЫРМАН ҚОСУ
 @app.route("/readers/add", methods=["GET", "POST"])
 def add_reader():
     if not is_librarian():
@@ -665,8 +683,11 @@ def add_reader():
     </html>
     """)
 
+# КІТАПТАР
 @app.route("/books")
 def books():
+    if not is_logged_in():
+        return redirect(url_for("login"))
     db = get_db()
     books = db.execute("""
         SELECT
@@ -675,6 +696,7 @@ def books():
                 SELECT COUNT(*)
                 FROM kitap_beru
                 WHERE kitap_beru.kitap_id = kitaptar.id
+                  AND kitap_beru.berildi = 'Иә'
                   AND kitap_beru.kaitaryldy = 'Жоқ'
             ) AS berilgen_sany,
             (
@@ -683,6 +705,7 @@ def books():
                     SELECT COUNT(*)
                     FROM kitap_beru
                     WHERE kitap_beru.kitap_id = kitaptar.id
+                      AND kitap_beru.berildi = 'Иә'
                       AND kitap_beru.kaitaryldy = 'Жоқ'
                 )
             ) AS korda_bar
@@ -739,6 +762,7 @@ def books():
     </html>
     """, books=books)
 
+# КІТАП ҚОСУ
 @app.route("/books/add", methods=["GET", "POST"])
 def add_book():
     if not is_librarian():
@@ -790,7 +814,7 @@ def add_book():
     </html>
     """)
 
-# Жалғыз және дұрыс сақталған delete_loan функциясы:
+# КІТАП БЕРУ ЖАЗБАСЫН ӨШІРУ
 @app.route("/loans/delete/<int:loan_id>", methods=["POST"])
 def delete_loan(loan_id):
     if not is_librarian():
@@ -798,22 +822,19 @@ def delete_loan(loan_id):
     db = get_db()
     try:
         if DATABASE_URL:
-            db.execute(
-                "DELETE FROM kitap_beru WHERE id = %s",
-                (loan_id,)
-            )
+            db.execute("DELETE FROM kitap_beru WHERE id = %s", (loan_id,))
         else:
-            db.execute(
-                "DELETE FROM kitap_beru WHERE id = ?",
-                (loan_id,)
-            )
+            db.execute("DELETE FROM kitap_beru WHERE id = ?", (loan_id,))
         db.commit()
     finally:
         db.close()
     return redirect(url_for("loans"))
 
+# КІТАП БЕРУ
 @app.route("/loans")
 def loans():
+    if not is_logged_in():
+        return redirect(url_for("login"))
     db = get_db()
     loans = db.execute("""
         SELECT
@@ -942,6 +963,7 @@ def loans():
     today=date.today().isoformat()
     )
 
+# КІТАПТЫ ҚАЙТАРУ
 @app.route("/loans/return/<int:loan_id>", methods=["POST"])
 def return_loan(loan_id):
     if not is_librarian():
@@ -967,8 +989,11 @@ def return_loan(loan_id):
     db.close()
     return redirect(url_for("loans"))
 
+# МЕРЗІМДІ ӨЗГЕРТУ
 @app.route("/loans/edit/<int:loan_id>", methods=["GET", "POST"])
 def edit_loan(loan_id):
+    if not is_librarian():
+        return "Бұл бөлімге тек кітапханашы кіре алады", 403
     db = get_db()
     loan = db.execute("""
         SELECT *
@@ -984,15 +1009,18 @@ def edit_loan(loan_id):
         return "Кітап беру жазбасы табылмады"
     if request.method == "POST":
         merzim = request.form["merzim"]
-        db.execute("""
-            UPDATE kitap_beru
-            SET merzim = %s
-            WHERE id = %s
-        """ if DATABASE_URL else """
-            UPDATE kitap_beru
-            SET merzim = ?
-            WHERE id = ?
-        """, (merzim, loan_id))
+        if DATABASE_URL:
+            db.execute("""
+                UPDATE kitap_beru
+                SET merzim = %s
+                WHERE id = %s
+            """, (merzim, loan_id))
+        else:
+            db.execute("""
+                UPDATE kitap_beru
+                SET merzim = ?
+                WHERE id = ?
+            """, (merzim, loan_id))
         db.commit()
         db.close()
         return redirect(url_for("loans"))
@@ -1016,6 +1044,7 @@ def edit_loan(loan_id):
     </html>
     """, loan=loan)
 
+# КІТАП БЕРУ — ҚОСУ
 @app.route("/loans/add", methods=["GET", "POST"])
 def add_loan():
     if not is_librarian():
@@ -1081,8 +1110,11 @@ def add_loan():
     </html>
     """, readers=readers, books=books)
 
+# ЕСЕП
 @app.route("/report")
 def report():
+    if not is_logged_in():
+        return redirect(url_for("login"))
     db = get_db()
     today_issued = db.execute("""
         SELECT COUNT(*) AS value
@@ -1224,6 +1256,9 @@ def report():
     this_month=this_month
     )
 
+# =========================================================
+# 1. EXCEL-ДЕН КІТАПТАРДЫ ЖҮКТЕУ (/books/import)
+# =========================================================
 @app.route("/books/import", methods=["GET", "POST"])
 def import_books():
     if not is_librarian():
@@ -1381,6 +1416,9 @@ def import_books():
     </html>
     """, message=message)
 
+# =========================================================
+# 2. ЕСКІ ДЕРЕКТЕРДІ ТАЗАЛАУ (/readers/reset)
+# =========================================================
 @app.route("/readers/reset", methods=["GET", "POST"])
 def reset_readers():
     if not is_librarian():
@@ -1414,201 +1452,134 @@ def reset_readers():
     <p><a href="/readers">Артқа қайту</a></p>
     """
 
+# =========================================================
+# 3. ОҚЫРМАНДАР РЕЙТИНГІ (/rating)
+# =========================================================
 @app.route("/rating")
 def rating():
     if not is_logged_in():
         return redirect(url_for("login"))
-
     db = get_db()
-
-    try:
-        # Оқырмандар рейтингі: барлық берілген кітап саны
-        readers_rating = db.execute("""
-            SELECT
-                okuyandar.aty AS reader_name,
-                okuyandar.synyp AS reader_class,
-                okuyandar.turi AS reader_type,
-                COUNT(kitap_beru.id) AS book_count
-            FROM okuyandar
-            JOIN kitap_beru
-                ON kitap_beru.okuyman_id = okuyandar.id
-            WHERE kitap_beru.berildi = 'Иә'
-            GROUP BY
-                okuyandar.id,
-                okuyandar.aty,
-                okuyandar.synyp,
-                okuyandar.turi
-            ORDER BY book_count DESC, reader_name ASC
-            LIMIT 10
-        """).fetchall()
-
-        # Кітаптар рейтингі: неше рет берілгені
-        books_rating = db.execute("""
-            SELECT
-                kitaptar.ataui AS book_title,
-                kitaptar.avtor AS author,
-                COUNT(kitap_beru.id) AS book_count
-            FROM kitaptar
-            JOIN kitap_beru
-                ON kitap_beru.kitap_id = kitaptar.id
-            WHERE kitap_beru.berildi = 'Иә'
-            GROUP BY
-                kitaptar.id,
-                kitaptar.ataui,
-                kitaptar.avtor
-            ORDER BY book_count DESC, book_title ASC
-            LIMIT 10
-        """).fetchall()
-
-    finally:
-        db.close()
-
+    top_readers = db.execute("""
+        SELECT 
+            okuyandar.aty, 
+            okuyandar.synyp, 
+            COUNT(kitap_beru.id) AS oxylgan_kitap_sany
+        FROM kitap_beru
+        JOIN okuyandar ON kitap_beru.okuyman_id = okuyandar.id
+        WHERE kitap_beru.berildi = 'Иә'
+        GROUP BY okuyandar.id, okuyandar.aty, okuyandar.synyp
+        ORDER BY oxylgan_kitap_sany DESC
+        LIMIT 20
+    """).fetchall()
+    db.close()
     return render_template_string("""
     <!DOCTYPE html>
     <html lang="kk">
     <head>
         <meta charset="UTF-8">
-        <meta name="viewport"
-              content="width=device-width, initial-scale=1">
         <title>Кітап оқу рейтингі</title>
         <style>
-            body {
-                font-family: Arial, sans-serif;
-                background: #f1f5f9;
-                padding: 20px;
-                margin: 0;
-            }
-            h1 {
-                text-align: center;
-                color: #1e3a5f;
-            }
-            h2 {
-                color: #1e3a5f;
-                margin-top: 30px;
-            }
-            .table-wrap {
-                overflow-x: auto;
-                background: white;
-                border-radius: 10px;
-                padding: 10px;
-                margin-bottom: 25px;
-            }
-            table {
-                width: 100%;
-                border-collapse: collapse;
-            }
-            th, td {
-                padding: 12px;
-                border-bottom: 1px solid #ddd;
-                text-align: left;
-            }
-            th {
-                background: #dbeafe;
-            }
-            .number {
-                font-weight: bold;
-                color: #166534;
-                text-align: center;
-            }
-            .back {
-                display: inline-block;
-                padding: 12px 18px;
-                background: #2563eb;
-                color: white;
-                text-decoration: none;
-                border-radius: 8px;
-            }
-            .empty {
-                text-align: center;
-                padding: 18px;
-                color: #666;
-            }
+            body { font-family: Arial, sans-serif; background: #f2f2f2; padding: 20px; max-width: 900px; margin: auto; }
+            h1 { text-align: center; }
+            table { width: 100%; background: white; border-collapse: collapse; margin-top: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+            th, td { padding: 12px; border: 1px solid #ccc; text-align: center; }
+            th { background: #2563eb; color: white; }
+            tr:nth-child(even) { background: #f9f9f9; }
+            .back { display: block; text-align: center; margin-top: 30px; font-size: 18px; text-decoration: none; color: #2563eb; }
         </style>
     </head>
     <body>
-        <h1>🏆 КІТАП ОҚУ РЕЙТИНГІ</h1>
-
-        <h2>🥇 Ең көп кітап алған оқырмандар — ТОП 10</h2>
-        <div class="table-wrap">
-            <table>
-                <tr>
-                    <th>Орын</th>
-                    <th>Оқырман</th>
-                    <th>Сыныбы</th>
-                    <th>Түрі</th>
-                    <th>Берілген кітап</th>
-                </tr>
-                {% for reader in readers_rating %}
-                <tr>
-                    <td>
-                        {% if loop.index == 1 %}🥇
-                        {% elif loop.index == 2 %}🥈
-                        {% elif loop.index == 3 %}🥉
-                        {% else %}{{ loop.index }}
-                        {% endif %}
-                    </td>
-                    <td>{{ reader["reader_name"] }}</td>
-                    <td>{{ reader["reader_class"] or "—" }}</td>
-                    <td>{{ reader["reader_type"] or "—" }}</td>
-                    <td class="number">{{ reader["book_count"] }}</td>
-                </tr>
-                {% else %}
-                <tr>
-                    <td colspan="5" class="empty">
-                        Әзірге кітап беру деректері жоқ.
-                    </td>
-                </tr>
-                {% endfor %}
-            </table>
-        </div>
-
-        <h2>📚 Ең көп берілген кітаптар — ТОП 10</h2>
-        <div class="table-wrap">
-            <table>
-                <tr>
-                    <th>Орын</th>
-                    <th>Кітап атауы</th>
-                    <th>Автор</th>
-                    <th>Берілген реті</th>
-                </tr>
-                {% for book in books_rating %}
-                <tr>
-                    <td>
-                        {% if loop.index == 1 %}🥇
-                        {% elif loop.index == 2 %}🥈
-                        {% elif loop.index == 3 %}🥉
-                        {% else %}{{ loop.index }}
-                        {% endif %}
-                    </td>
-                    <td>{{ book["book_title"] }}</td>
-                    <td>{{ book["author"] or "—" }}</td>
-                    <td class="number">{{ book["book_count"] }}</td>
-                </tr>
-                {% else %}
-                <tr>
-                    <td colspan="4" class="empty">
-                        Әзірге кітап беру деректері жоқ.
-                    </td>
-                </tr>
-                {% endfor %}
-            </table>
-        </div>
-
-        <p style="text-align:center">
-            <a class="back" href="/">← Басты бетке қайту</a>
-        </p>
+        <h1>🏆 Ең белсенді оқырмандар рейтингі</h1>
+        <table>
+            <tr>
+                <th>Орын</th>
+                <th>Аты-жөні</th>
+                <th>Сыныбы</th>
+                <th>Оқыған кітап саны</th>
+            </tr>
+            {% for r in top_readers %}
+            <tr>
+                <td><b>{{ loop.index }}</b></td>
+                <td>{{ r['aty'] }}</td>
+                <td>{{ r['synyp'] }}</td>
+                <td>{{ r['oxylgan_kitap_sany'] }}</td>
+            </tr>
+            {% endfor %}
+        </table>
+        <a class="back" href="/">← Басты бетке қайту</a>
     </body>
     </html>
-    """,
-    readers_rating=readers_rating,
-    books_rating=books_rating
-    )
+    """, top_readers=top_readers)
 
+# =========================================================
+# 4. ЕҢ КӨП БЕРІЛГЕН КІТАПТАР РЕЙТИНГІ (/book-rating)
+# =========================================================
+@app.route("/book-rating")
+def book_rating():
+    if not is_logged_in():
+        return redirect(url_for("login"))
+    db = get_db()
+    top_books = db.execute("""
+        SELECT 
+            kitaptar.ataui, 
+            kitaptar.avtor, 
+            COUNT(kitap_beru.id) AS berilgen_sany
+        FROM kitap_beru
+        JOIN kitaptar ON kitap_beru.kitap_id = kitaptar.id
+        WHERE kitap_beru.berildi = 'Иә'
+        GROUP BY kitaptar.id, kitaptar.ataui, kitaptar.avtor
+        ORDER BY berilgen_sany DESC
+        LIMIT 20
+    """).fetchall()
+    db.close()
+    return render_template_string("""
+    <!DOCTYPE html>
+    <html lang="kk">
+    <head>
+        <meta charset="UTF-8">
+        <title>Ең көп берілген кітаптар рейтингі</title>
+        <style>
+            body { font-family: Arial, sans-serif; background: #f2f2f2; padding: 20px; max-width: 900px; margin: auto; }
+            h1 { text-align: center; }
+            table { width: 100%; background: white; border-collapse: collapse; margin-top: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+            th, td { padding: 12px; border: 1px solid #ccc; text-align: center; }
+            th { background: #16a34a; color: white; }
+            tr:nth-child(even) { background: #f9f9f9; }
+            .back { display: block; text-align: center; margin-top: 30px; font-size: 18px; text-decoration: none; color: #2563eb; }
+        </style>
+    </head>
+    <body>
+        <h1>📚 Ең көп сұранысқа ие кітаптар рейтингі</h1>
+        <table>
+            <tr>
+                <th>Орын</th>
+                <th>Кітап атауы</th>
+                <th>Авторы</th>
+                <th>Берілген реті</th>
+            </tr>
+            {% for b in top_books %}
+            <tr>
+                <td><b>{{ loop.index }}</b></td>
+                <td>{{ b['ataui'] }}</td>
+                <td>{{ b['avtor'] }}</td>
+                <td>{{ b['berilgen_sany'] }}</td>
+            </tr>
+            {% endfor %}
+        </table>
+        <a class="back" href="/">← Басты бетке қайту</a>
+    </body>
+    </html>
+    """, top_books=top_books)
 
-
-
+# =========================================================
+# 5. ДЕРЕКҚОРДЫ ІСКЕ ҚОСУ
+# =========================================================
 init_db()
 
+# =========================================================
+# 6. ҚОСУДЫ БАСТАУ (MAIN)
+# =========================================================
 if __name__ == "__main__":
     app.run(
         host="0.0.0.0",
