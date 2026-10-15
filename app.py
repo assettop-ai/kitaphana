@@ -349,103 +349,126 @@ def home():
         <title>Кітапхана басқару жүйесі</title>
         <style>
             body {
-                font-family: Arial, sans-serif;
-                background: #eaf2ff url('/static/library-bg.jpg') center / cover fixed no-repeat;
+                font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+                background: url('/static/library-bg.jpg') center / cover fixed no-repeat;
                 margin: 0;
-                padding: 20px;
+                padding: 30px 20px;
+                min-height: 100vh;
+                box-sizing: border-box;
+            }
+            .container {
+                max-width: 1100px;
+                margin: 0 auto;
             }
             h1 {
                 text-align: center;
-                margin: 0 auto 30px;
-                max-width: 1000px;
-                color: white;
-                background: rgba(0, 0, 0, 0.75);
-                padding: 18px;
-                border-radius: 12px;
-                text-shadow: 2px 2px 4px black;
+                color: #ffffff;
+                background: rgba(15, 23, 42, 0.75);
+                backdrop-filter: blur(12px);
+                padding: 20px 30px;
+                border-radius: 16px;
+                border: 1px solid rgba(255, 255, 255, 0.2);
+                letter-spacing: 1.5px;
+                box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3);
+                margin-bottom: 35px;
             }
             .cards {
-                max-width: 1000px;
-                margin: auto;
                 display: grid;
-                grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+                grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
                 gap: 20px;
+                margin-bottom: 35px;
             }
             .card {
-                background: white;
-                padding: 25px;
-                border-radius: 15px;
+                background: rgba(255, 255, 255, 0.88);
+                backdrop-filter: blur(10px);
+                padding: 25px 20px;
+                border-radius: 16px;
                 text-align: center;
-                box-shadow: 0 3px 10px rgba(0,0,0,0.12);
+                border: 1px solid rgba(255, 255, 255, 0.4);
+                box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
+                transition: transform 0.3s ease, box-shadow 0.3s ease;
+            }
+            .card:hover {
+                transform: translateY(-5px);
+                box-shadow: 0 15px 30px rgba(0,0,0,0.25);
             }
             .card-title {
-                font-size: 18px;
+                font-size: 16px;
+                color: #475569;
+                font-weight: 600;
+                text-transform: uppercase;
+                letter-spacing: 0.5px;
             }
             .number {
                 font-size: 42px;
-                font-weight: bold;
+                font-weight: 800;
+                color: #1e293b;
                 margin-top: 10px;
             }
+            .number.danger {
+                color: #dc2626;
+            }
             .menu {
-                max-width: 1200px;
-                margin: 35px auto;
-                display: flex;
-                flex-wrap: wrap;
-                justify-content: center;
+                display: grid;
+                grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
                 gap: 15px;
             }
-            .menu .button {
-                flex: 0 1 auto;
-                white-space: nowrap;
-            }
             .button {
-                display: inline-block;
-                padding: 18px;
-                background: #ffffff;
-                border-radius: 12px;
-                text-align: center;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                padding: 18px 20px;
+                background: rgba(255, 255, 255, 0.92);
+                backdrop-filter: blur(8px);
+                border-radius: 14px;
                 text-decoration: none;
-                color: #222;
-                font-size: 18px;
-                font-weight: bold;
-                box-shadow: 0 2px 8px rgba(0,0,0,0.12);
+                color: #0f172a;
+                font-size: 17px;
+                font-weight: 700;
+                border: 1px solid rgba(255, 255, 255, 0.5);
+                box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+                transition: all 0.3s ease;
             }
             .button:hover {
-                background: #e9eef5;
-            }
-            .danger {
-                color: #cc0000;
+                background: #2563eb;
+                color: #ffffff;
+                transform: translateY(-3px);
+                box-shadow: 0 8px 20px rgba(37, 99, 235, 0.4);
             }
         </style>
     </head>
     <body>
-        <h1>КІТАПХАНА БАСҚАРУ ЖҮЙЕСІ</h1>
-        <div class="cards">
-            <div class="card">
-                <div class="card-title">Барлық кітап</div>
-                <div class="number">{{ total_books }}</div>
+        <div class="container">
+            <h1>КІТАПХАНА БАСҚАРУ ЖҮЙЕСІ</h1>
+            
+            <div class="cards">
+                <div class="card">
+                    <div class="card-title">📖 Барлық кітап</div>
+                    <div class="number">{{ total_books }}</div>
+                </div>
+                <div class="card">
+                    <div class="card-title">👥 Оқырмандар</div>
+                    <div class="number">{{ total_readers }}</div>
+                </div>
+                <div class="card">
+                    <div class="card-title">📤 Қазір берілген</div>
+                    <div class="number">{{ currently_out }}</div>
+                </div>
+                <div class="card">
+                    <div class="card-title">⚠️ Мерзімі өткен</div>
+                    <div class="number danger">{{ overdue }}</div>
+                </div>
             </div>
-            <div class="card">
-                <div class="card-title">Оқырмандар</div>
-                <div class="number">{{ total_readers }}</div>
+
+            <div class="menu">
+                <a class="button" href="/readers">👥 Оқырмандар</a>
+                <a class="button" href="/books">📚 Кітаптар</a>
+                <a class="button" href="/loans">🔄 Кітап беру</a>
+                <a class="button" href="/rating">👨‍🎓 Оқушылар рейтингісі</a>
+                <a class="button" href="/teacher-rating">👩‍🏫 Мұғалімдер рейтингісі</a>
+                <a class="button" href="/book-rating">🥇 Кітаптар рейтингісі</a>
+                <a class="button" href="/report">📊 Есептер</a>
             </div>
-            <div class="card">
-                <div class="card-title">Қазір берілген</div>
-                <div class="number">{{ currently_out }}</div>
-            </div>
-            <div class="card">
-                <div class="card-title">Мерзімі өткен</div>
-                <div class="number danger">{{ overdue }}</div>
-            </div>
-        </div>
-        <div class="menu">
-            <a class="button" href="/readers">ОҚЫРМАНДАР</a>
-            <a class="button" href="/books">КІТАПТАР</a>
-            <a class="button" href="/loans">КІТАП БЕРУ</a>
-            <a class="button" href="/rating">👨‍🎓 Оқушылар рейтингісі</a>
-            <a class="button" href="/teacher-rating">👩‍🏫 Мұғалімдер рейтингісі</a>
-            <a class="button" href="/book-rating">📚 Кітаптар рейтингісі</a>
-            <a class="button" href="/report">📊 ЕСЕП</a>
         </div>
     </body>
     </html>
@@ -633,8 +656,6 @@ def import_readers():
 # ОҚЫРМАН ҚОСУ
 @app.route("/readers/add", methods=["GET", "POST"])
 def add_reader():
-    if DATABASE_URL:
-        pass
     if not is_librarian():
         return "Бұл бөлімге тек кітапханашы кіре алады", 403
     if request.method == "POST":
@@ -1060,8 +1081,6 @@ def add_loan():
         kitap_id = request.form["kitap_id"]
         kuni = request.form["kuni"]
         merzim = request.form["merzim"]
-        if DATABASE_URL:
-            pass
         if not kuni:
             db.close()
             return "Кітап берілген күнді таңдаңыз", 400
