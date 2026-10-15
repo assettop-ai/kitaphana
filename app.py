@@ -490,7 +490,7 @@ def auto_fill_loans():
         return "Бұл бөлімге тек кітапханашы кіре алады", 403
     db = get_db()
     
-    # 0-сыныптарды дерекқордан түгелдей алып тастау (тазалау)
+    # 0-сыныптарды дерекқордан түгелдей алып тастау
     if DATABASE_URL:
         db.execute("""
             DELETE FROM okuyandar 
@@ -505,7 +505,6 @@ def auto_fill_loans():
         """)
     db.commit()
 
-    # Қалған оқушылар мен мұғалімдерді бөліп алу
     students = db.execute("""
         SELECT id FROM okuyandar 
         WHERE turi = 'Оқушы' 
@@ -521,7 +520,6 @@ def auto_fill_loans():
         db.close()
         return "Қате: Дерекқорда кітаптар жоқ. Алдымен кітаптарды жүктеңіз!", 400
 
-    # 2026 жылдың 1 қыркүйегінен бүгінгі күнге дейінгі жұмыс күндерін жинау
     start_d = date(2026, 9, 1)
     end_d = date.today()
     workdays = []
@@ -536,7 +534,6 @@ def auto_fill_loans():
 
     added_count = 0
     
-    # 180 оқушыға кітап беру жазбасын жасау
     if students and books:
         for i in range(180):
             st = students[i % len(students)]
@@ -556,7 +553,6 @@ def auto_fill_loans():
                 """, (k_date, st["id"], bk["id"], m_date))
             added_count += 1
 
-    # 53 мұғалімге кітап беру жазбасын жасау
     if teachers and books:
         for i in range(53):
             tc = teachers[i % len(teachers)]
@@ -600,7 +596,7 @@ def delete_reader(reader_id):
     db.close()
     return redirect(url_for("readers"))
 
-# ОҚЫРМАНДАР (0-СЫНЫПТАРДЫ КӨРСЕТПЕУ)
+# ОҚЫРМАНДАР
 @app.route("/readers")
 def readers():
     if not is_logged_in():
@@ -669,7 +665,7 @@ def readers():
     </html>
     """, readers=readers)
 
-# ОҚЫРМАНДАРДЫ EXCEL-ДЕН ЕНГІЗУ (0-СЫНЫПТЫ ӨТКІЗІП ЖІБЕРУ)
+# ОҚЫРМАНДАРДЫ EXCEL-ДЕН ЕНГІЗУ
 @app.route("/readers/import", methods=["GET", "POST"])
 def import_readers():
     if not is_librarian():
@@ -729,7 +725,6 @@ def import_readers():
                 else:
                     turi = "Оқушы"
                 
-                # 0-сынып болса базаға қоспай аттап өтеміз
                 if turi == "Оқушы" and (synyp.startswith("0") or synyp == "0" or "даярлық" in synyp.lower()):
                     skipped += 1
                     continue
@@ -1020,7 +1015,7 @@ def delete_loan(loan_id):
         db.close()
     return redirect(url_for("loans"))
 
-# КІТАП БЕРУ
+# КІТАП БЕРУ (ГОРИЗОНТАЛЬДЫ СКРОЛЛ АЛЫП ТАСТАЛДЫ, КЕСТЕ ЭКРАНҒА СЫЙЫҚТЫ ЕТІП ЖӨНДЕЛДІ)
 @app.route("/loans")
 def loans():
     if not is_logged_in():
@@ -1044,107 +1039,127 @@ def loans():
     <html lang="kk">
     <head>
         <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
         <title>Кітап беру</title>
         <style>
             body {
                 font-family: Arial, sans-serif;
-                padding: 20px;
+                padding: 15px;
                 background: #eaf2ff url('/static/library-bg.jpg') center / cover fixed no-repeat;
-                max-width: 1600px;
+                max-width: 1200px;
                 margin: 0 auto;
+                box-sizing: border-box;
+            }
+            h1 {
+                text-align: center;
+                color: white;
+                background: rgba(0, 0, 0, 0.75);
+                padding: 12px;
+                border-radius: 10px;
+                text-shadow: 2px 2px 4px black;
+                font-size: 24px;
             }
             table {
                 width: 100%;
-                margin: 20px auto;
                 background: white;
                 border-collapse: collapse;
-                table-layout: auto;
-                box-sizing: border-box;
+                table-layout: fixed;
+                margin-top: 15px;
+                box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+                border-radius: 8px;
+                overflow: hidden;
             }
             th, td {
-                padding: 10px;
-                border: 1px solid #ccc;
+                padding: 8px 6px;
+                border: 1px solid #ddd;
                 text-align: center;
-                white-space: nowrap;
+                font-size: 13px;
+                word-wrap: break-word;
+                overflow-wrap: break-word;
             }
             th {
-                background: #eeeeee;
+                background: #f1f5f9;
+                color: #1e293b;
+                font-weight: bold;
             }
+            /* Баған ендерін экранға оңтайлы сыйғызу */
+            th:nth-child(1), td:nth-child(1) { width: 6%; }   /* ID */
+            th:nth-child(2), td:nth-child(2) { width: 12%; }  /* Күні */
+            th:nth-child(3), td:nth-child(3) { width: 22%; }  /* Оқырман */
+            th:nth-child(4), td:nth-child(4) { width: 22%; }  /* Кітап */
+            th:nth-child(5), td:nth-child(5) { width: 10%; }  /* Берілді */
+            th:nth-child(6), td:nth-child(6) { width: 10%; }  /* Қайтарылды */
+            th:nth-child(7), td:nth-child(7) { width: 18%; }  /* Мерзімі / Әрекет */
+
             .overdue {
-                background: #ffcccc;
+                background: #ffcccc !important;
                 color: #cc0000;
                 font-weight: bold;
             }
             .add {
                 display: inline-block;
-                padding: 12px 18px;
+                padding: 10px 16px;
                 background: white;
                 text-decoration: none;
                 color: black;
                 border-radius: 8px;
-                margin-bottom: 20px;
+                font-weight: bold;
+                box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            }
+            button {
+                padding: 4px 8px;
+                font-size: 11px;
+                cursor: pointer;
             }
         </style>
     </head>
     <body>
-        <h1 style="text-align: center; color: white; background: rgba(0, 0, 0, 0.75); padding: 15px; border-radius: 10px; text-shadow: 2px 2px 4px black;">
-            КІТАП БЕРУ
-        </h1>
+        <h1>КІТАП БЕРУ</h1>
         {% if session.get("role") == "librarian" %}
             <a class="add" href="/loans/add">+ КІТАП БЕРУ</a>
         {% endif %}
-        <div style="width: 100%; max-width: 1600px; margin: 20px auto; overflow-x: auto;">
-            <table>
-                <tr>
-                    <th>ID</th>
-                    <th>Күні</th>
-                    <th>Оқырман</th>
-                    <th>Кітап</th>
-                    <th>Берілді</th>
-                    <th>Қайтарылды</th>
-                    <th>Мерзімі</th>
+        <table>
+            <tr>
+                <th>ID</th>
+                <th>Күні</th>
+                <th>Оқырман</th>
+                <th>Кітап</th>
+                <th>Бер.</th>
+                <th>Қайт.</th>
+                <th>Мерзімі / Әрекет</th>
+            </tr>
+            {% for loan in loans %}
+            <tr class="{% if loan['kaitaryldy'] == 'Жоқ' and loan['merzim'] and loan['merzim'] < today %}overdue{% endif %}">
+                <td>{{ loan["id"] }}</td>
+                <td>{{ loan["kuni"] }}</td>
+                <td>{{ loan["okuyman_aty"] }}</td>
+                <td>{{ loan["kitap_atay"] }}</td>
+                <td>{{ loan["berildi"] }}</td>
+                <td>{{ loan["kaitaryldy"] }}</td>
+                <td>
+                    {{ loan["merzim"] }}
                     {% if session.get("role") == "librarian" %}
-                        <th>Әрекет</th>
-                    {% endif %}
-                </tr>
-                {% for loan in loans %}
-                <tr class="{% if loan['kaitaryldy'] == 'Жоқ' and loan['merzim'] and loan['merzim'] < today %}overdue{% endif %}">
-                    <td>{{ loan["id"] }}</td>
-                    <td>{{ loan["kuni"] }}</td>
-                    <td>{{ loan["okuyman_aty"] }}</td>
-                    <td>{{ loan["kitap_atay"] }}</td>
-                    <td>{{ loan["berildi"] }}</td>
-                    <td>{{ loan["kaitaryldy"] }}</td>
-                    <td>
-                        {{ loan["merzim"] }}
-                        {% if session.get("role") == "librarian" %}
-                            <br><br>
-                            <a href="/loans/edit/{{ loan['id'] }}">Мерзімін өзгерту</a>
-                        {% endif %}
-                    </td>
-                    {% if session.get("role") == "librarian" %}
-                    <td>
+                        <br>
+                        <a href="/loans/edit/{{ loan['id'] }}" style="font-size:11px;">Өзгерту</a>
+                        <hr style="margin: 3px 0; border:0; border-top:1px solid #ccc;">
                         {% if loan["kaitaryldy"] == "Жоқ" %}
-                            <form method="POST" action="/loans/return/{{ loan['id'] }}">
-                                <button type="submit">ҚАЙТАРУ</button>
+                            <form method="POST" action="/loans/return/{{ loan['id'] }}" style="display:inline;">
+                                <button type="submit" style="background:#16a34a; color:white; border:0; border-radius:3px; padding:3px 6px;">Қайтару</button>
                             </form>
                         {% else %}
-                            Қайтарылды
+                            <span>Қайтарылды</span>
                         {% endif %}
-                        <form method="POST" action="/loans/delete/{{ loan['id'] }}" onsubmit="return confirm('Осы жазбаны өшіресіз бе?')">
-                            <button type="submit" style="background:red;color:white;padding:7px;border:0;border-radius:5px;margin-top:5px;">
-                                ӨШІРУ
-                            </button>
+                        <form method="POST" action="/loans/delete/{{ loan['id'] }}" onsubmit="return confirm('Өшіресіз бе?')" style="display:inline;">
+                            <button type="submit" style="background:#dc3545; color:white; border:0; border-radius:3px; padding:3px 6px;">Жою</button>
                         </form>
-                    </td>
                     {% endif %}
-                </tr>
-                {% endfor %}
-            </table>
-        </div>
+                </td>
+            </tr>
+            {% endfor %}
+        </table>
         <br>
-        <div style="text-align: center; margin-top: 20px;">
-            <a href="/">← Басты бет</a>
+        <div style="text-align: center;">
+            <a href="/" style="color: white; background: rgba(0,0,0,0.6); padding: 8px 15px; border-radius: 6px; text-decoration: none; font-weight: bold;">← Басты бет</a>
         </div>
     </body>
     </html>
@@ -1252,9 +1267,6 @@ def add_loan():
         kitap_id = request.form["kitap_id"]
         kuni = request.form["kuni"]
         merzim = request.form["merzim"]
-        if not kuni:
-            db.close()
-            return "Кітап берілген күнді таңдаңыз", 400
         if DATABASE_URL:
             db.execute("""
                 INSERT INTO kitap_beru
