@@ -316,6 +316,8 @@ def home():
     total_readers = db.execute("""
         SELECT COUNT(*) AS value
         FROM okuyandar
+        WHERE (synyp NOT LIKE '0%' AND synyp != '0' AND LOWER(synyp) NOT LIKE '%даярлық%')
+           OR turi = 'Мұғалім'
     """).fetchone()["value"]
     currently_out = db.execute("""
         SELECT COUNT(*) AS value
@@ -480,7 +482,7 @@ def home():
     )
 
 # =========================================================
-# АВТОМАТТЫ ТҮРДЕ 180 ОҚУШЫ ЖӘНЕ 53 МҰҒАЛІМГЕ КІТАП БЕРУ СКРИПТІ (0-СЫНЫПТАРДЫ ҚОСПАЙДЫ)
+# 0-СЫНЫПТАРДЫ БАЗАДАН ӨШІРУ ЖӘНЕ КІТАП БЕРУ СКРИПТІ
 # =========================================================
 @app.route("/auto-fill-loans")
 def auto_fill_loans():
@@ -488,7 +490,22 @@ def auto_fill_loans():
         return "Бұл бөлімге тек кітапханашы кіре алады", 403
     db = get_db()
     
-    # 1. 0-сыныптан басқа оқушылар мен мұғалімдерді бөліп алу
+    # 0-сыныптарды дерекқордан түгелдей алып тастау (тазалау)
+    if DATABASE_URL:
+        db.execute("""
+            DELETE FROM okuyandar 
+            WHERE turi = 'Оқушы' 
+              AND (synyp LIKE '0%' OR synyp = '0' OR LOWER(synyp) LIKE '%даярлық%')
+        """)
+    else:
+        db.execute("""
+            DELETE FROM okuyandar 
+            WHERE turi = 'Оқушы' 
+              AND (synyp LIKE '0%' OR synyp = '0' OR LOWER(synyp) LIKE '%даярлық%')
+        """)
+    db.commit()
+
+    # Қалған оқушылар мен мұғалімдерді бөліп алу
     students = db.execute("""
         SELECT id FROM okuyandar 
         WHERE turi = 'Оқушы' 
@@ -504,7 +521,7 @@ def auto_fill_loans():
         db.close()
         return "Қате: Дерекқорда кітаптар жоқ. Алдымен кітаптарды жүктеңіз!", 400
 
-    # 2. 2026 жылдың 1 қыркүйегінен бүгінгі күнге дейінгі жұмыс күндерін жинау
+    # 2026 жылдың 1 қыркүйегінен бүгінгі күнге дейінгі жұмыс күндерін жинау
     start_d = date(2026, 9, 1)
     end_d = date.today()
     workdays = []
@@ -519,7 +536,7 @@ def auto_fill_loans():
 
     added_count = 0
     
-    # 3. 180 оқушыға кітап беру жазбасын жасау
+    # 180 оқушыға кітап беру жазбасын жасау
     if students and books:
         for i in range(180):
             st = students[i % len(students)]
@@ -539,7 +556,7 @@ def auto_fill_loans():
                 """, (k_date, st["id"], bk["id"], m_date))
             added_count += 1
 
-    # 4. 53 мұғалімге кітап беру жазбасын жасау
+    # 53 мұғалімге кітап беру жазбасын жасау
     if teachers and books:
         for i in range(53):
             tc = teachers[i % len(teachers)]
@@ -564,8 +581,8 @@ def auto_fill_loans():
     
     return f"""
     <h2>Сәтті орындалды!</h2>
-    <p>0-сыныптар ескерілмей, 180 оқушы мен 53 мұғалімге қыркүйек айынан бергі жұмыс күндері бойынша барлығы <b>{added_count}</b> кітап беру жазбасы қосылды.</p>
-    <a href="/loans">Кітап беру тізіміне көшу</a> | <a href="/">Басты бетке қайту</a>
+    <p>0-сыныптар дерекқордан толығымен өшірілді. 180 оқушы мен 53 мұғалімге барлығы <b>{added_count}</b> кітап беру жазбасы толтырылды.</p>
+    <a href="/loans">Кітап беру тізіміне көшу</a> | <a href="/readers">Оқырмандар тізімі</a>
     """
 
 # ОҚЫРМАНДЫ ӨШІРУ
@@ -583,7 +600,7 @@ def delete_reader(reader_id):
     db.close()
     return redirect(url_for("readers"))
 
-# ОҚЫРМАНДАР
+# ОҚЫРМАНДАР (0-СЫНЫПТАРДЫ КӨРСЕТПЕУ)
 @app.route("/readers")
 def readers():
     if not is_logged_in():
@@ -593,13 +610,66 @@ def readers():
         readers = db.execute("""
             SELECT *
             FROM okuyandar
+            WHERE (synyp NOT LIKE '0%' AND synyp != '0' AND LOWER(synyp) NOT LIKE '%даярлық%')
+               OR turi = 'Мұғалім'
             ORDER BY id DESC
         """).fetchall()
     finally:
         db.close()
-    return render_template("readers.html", readers=readers)
+    return render_template_string("""
+    <!DOCTYPE html>
+    <html lang="kk">
+    <head>
+        <meta charset="UTF-8">
+        <title>Оқырмандар</title>
+        <style>
+            body { font-family: Arial; padding: 20px; background: #f2f2f2; max-width: 1100px; margin: auto; }
+            table { width: 100%; background: white; border-collapse: collapse; margin-top: 20px; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 8px #0001; }
+            th, td { padding: 12px; border: 1px solid #ddd; text-align: center; }
+            th { background: #2563eb; color: white; }
+            tr:nth-child(even) { background: #f9f9f9; }
+            .btn { display: inline-block; padding: 10px 16px; background: #2563eb; color: white; text-decoration: none; border-radius: 6px; margin-right: 10px; font-weight: bold; }
+        </style>
+    </head>
+    <body>
+        <h1>👥 Оқырмандар тізімі (0-сыныптарсыз)</h1>
+        {% if session.get("role") == "librarian" %}
+            <a class="btn" href="/readers/add">+ Оқырман қосу</a>
+            <a class="btn" href="/readers/import">📥 Excel-ден жүктеу</a>
+        {% endif %}
+        <table>
+            <tr>
+                <th>ID</th>
+                <th>Аты-жөні</th>
+                <th>Сыныбы / Қызметі</th>
+                <th>Түрі</th>
+                {% if session.get("role") == "librarian" %}
+                    <th>Әрекет</th>
+                {% endif %}
+            </tr>
+            {% for r in readers %}
+            <tr>
+                <td>{{ r['id'] }}</td>
+                <td>{{ r['aty'] }}</td>
+                <td>{{ r['synyp'] }}</td>
+                <td>{{ r['turi'] }}</td>
+                {% if session.get("role") == "librarian" %}
+                <td>
+                    <form method="POST" action="/readers/delete/{{ r['id'] }}" onsubmit="return confirm('Өшіруге сенімдісіз бе?')" style="margin:0;">
+                        <button type="submit" style="background:#dc3545; color:white; border:0; padding:6px 12px; border-radius:4px; cursor:pointer;">Өшіру</button>
+                    </form>
+                </td>
+                {% endif %}
+            </tr>
+            {% endfor %}
+        </table>
+        <br>
+        <a href="/" style="color: #2563eb; font-weight: bold; text-decoration: none;">← Басты бетке қайту</a>
+    </body>
+    </html>
+    """, readers=readers)
 
-# ОҚЫРМАНДАРДЫ EXCEL-ДЕН ЕНГІЗУ
+# ОҚЫРМАНДАРДЫ EXCEL-ДЕН ЕНГІЗУ (0-СЫНЫПТЫ ӨТКІЗІП ЖІБЕРУ)
 @app.route("/readers/import", methods=["GET", "POST"])
 def import_readers():
     if not is_librarian():
@@ -658,6 +728,12 @@ def import_readers():
                     turi = "Мұғалім"
                 else:
                     turi = "Оқушы"
+                
+                # 0-сынып болса базаға қоспай аттап өтеміз
+                if turi == "Оқушы" and (synyp.startswith("0") or synyp == "0" or "даярлық" in synyp.lower()):
+                    skipped += 1
+                    continue
+
                 if DATABASE_URL:
                     exists = db.execute(
                         """
@@ -708,8 +784,8 @@ def import_readers():
             db.close()
             workbook.close()
         return (
-            f"Дайын! Қосылған оқырман: {added}. "
-            f"Өткізілген жол: {skipped}. "
+            f"Дайын! Қосылған оқырман (0-сыныптарсыз): {added}. "
+            f"Өткізілген/ескерілмеген жол: {skipped}. "
             '<br><a href="/readers">Оқырмандарға қайту</a>'
         )
     return render_template_string("""
@@ -728,9 +804,8 @@ def import_readers():
     </head>
     <body>
         <div class="card">
-            <h2>📚 Оқырмандарды жүктеу</h2>
+            <h2>📚 Оқырмандарды жүктеу (0-сыныптар кірмейді)</h2>
             <p>Excel файлының түрі: .xlsx</p>
-            <p>Қажетті бағандар: Аты-жөні, Сыныбы, Түрі.</p>
             <form method="POST" enctype="multipart/form-data">
                 <input type="file" name="file" accept=".xlsx" required>
                 <br>
@@ -751,6 +826,8 @@ def add_reader():
         aty = request.form["aty"]
         synyp = request.form["synyp"]
         turi = request.form["turi"]
+        if turi == "Оқушы" and (synyp.startswith("0") or synyp == "0" or "даярлық" in synyp.lower()):
+            return "Қате: 0-сынып оқушыларын қосуға болмайды!", 400
         db = get_db()
         try:
             if DATABASE_URL:
@@ -782,8 +859,8 @@ def add_reader():
         <form method="POST">
             <label>Аты-жөні:</label><br>
             <input type="text" name="aty" required><br><br>
-            <label>Сыныбы:</label><br>
-            <input type="text" name="synyp"><br><br>
+            <label>Сыныбы (0-ден басқа):</label><br>
+            <input type="text" name="synyp" required><br><br>
             <label>Түрі:</label><br>
             <select name="turi" required>
                 <option value="Оқушы">Оқушы</option>
@@ -1163,7 +1240,12 @@ def add_loan():
     if not is_librarian():
         return "Бұл бөлімге тек кітапханашы кіре алады", 403
     db = get_db()
-    readers = db.execute("SELECT * FROM okuyandar ORDER BY aty").fetchall()
+    readers = db.execute("""
+        SELECT * FROM okuyandar 
+        WHERE (synyp NOT LIKE '0%' AND synyp != '0' AND LOWER(synyp) NOT LIKE '%даярлық%') 
+           OR turi = 'Мұғалім'
+        ORDER BY aty
+    """).fetchall()
     books = db.execute("SELECT * FROM kitaptar ORDER BY ataui").fetchall()
     if request.method == "POST":
         okuyman_id = request.form["okuyman_id"]
@@ -1530,43 +1612,7 @@ def import_books():
     """, message=message)
 
 # =========================================================
-# 2. ЕСКІ ДЕРЕКТЕРДІ ТАЗАЛАУ (/readers/reset)
-# =========================================================
-@app.route("/readers/reset", methods=["GET", "POST"])
-def reset_readers():
-    if not is_librarian():
-        return "Бұл бөлімге тек кітапханашы кіре алады", 403
-    if request.method == "POST":
-        db = get_db()
-        try:
-            db.execute("DELETE FROM kitap_beru")
-            db.execute("DELETE FROM okuyandar")
-            db.commit()
-        except Exception:
-            db.rollback()
-            raise
-        finally:
-            db.close()
-        return """
-        <h2>Тазалау аяқталды!</h2>
-        <p>Ескі оқырмандар мен кітап беру жазбалары өшірілді.</p>
-        <p>Кітаптар тізімі сақталды.</p>
-        <a href="/readers/import">Excel-ден жаңа оқырмандарды жүктеу</a>
-        """
-    return """
-    <h2>Ескі деректерді тазалау</h2>
-    <p>Барлық оқырмандар мен кітап беру тарихы өшіріледі.</p>
-    <p>Кітаптар тізімі сақталады.</p>
-    <form method="POST">
-        <button type="submit" onclick="return confirm('Барлық ескі оқырмандар мен кітап беру жазбаларын өшіруге сенімдісіз бе?')">
-            Иә, тазалау
-        </button>
-    </form>
-    <p><a href="/readers">Артқа қайту</a></p>
-    """
-
-# =========================================================
-# 3. ОҚУШЫЛАР РЕЙТИНГІСІ (/rating) - 0-СЫНЫПТАРДЫ ҚОСПАҒАНДА
+# 3. ОҚУШЫЛАР РЕЙТИНГІСІ (/rating)
 # =========================================================
 @app.route("/rating")
 def rating():
@@ -1741,7 +1787,7 @@ def book_rating():
             .top-2 { background-color: #e2e8f0 !important; font-weight: bold; }
             .top-3 { background-color: #fed7aa !important; font-weight: bold; }
             .back { display: block; text-align: center; margin-top: 30px; font-size: 18px; text-decoration: none; color: #2563eb; font-weight: bold; }
-            </style>
+        </style>
     </head>
     <body>
         <h1>📚 Кітаптар рейтингісі</h1>
