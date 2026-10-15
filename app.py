@@ -2,7 +2,7 @@ from flask import Flask, request, redirect, url_for, render_template, render_tem
 import sqlite3
 import os
 import re
-from datetime import date
+from datetime import date, timedelta
 from openpyxl import load_workbook
 
 app = Flask(__name__)
@@ -478,6 +478,89 @@ def home():
     currently_out=currently_out,
     overdue=overdue
     )
+
+# =========================================================
+# АВТОМАТТЫ ТҮРДЕ 180 ОҚУШЫ ЖӘНЕ 53 МҰҒАЛІМГЕ КІТАП БЕРУ СКРИПТІ
+# =========================================================
+@app.route("/auto-fill-loans")
+def auto_fill_loans():
+    if not is_librarian():
+        return "Бұл бөлімге тек кітапханашы кіре алады", 403
+    db = get_db()
+    
+    # 1. Барлық оқушылар мен мұғалімдерді бөліп алу
+    students = db.execute("SELECT id FROM okuyandar WHERE turi = 'Оқушы'").fetchall()
+    teachers = db.execute("SELECT id FROM okuyandar WHERE turi = 'Мұғалім'").fetchall()
+    books = db.execute("SELECT id FROM kitaptar").fetchall()
+    
+    if not books:
+        db.close()
+        return "Қате: Дерекқорда кітаптар жоқ. Алдымен кітаптарды жүктеңіз!", 400
+
+    # 2. 2026 жылдың 1 қыркүйегінен бүгінгі күнге дейінгі жұмыс күндерін (сенбі-жексенбісіз) жинау
+    start_d = date(2026, 9, 1)
+    end_d = date.today()
+    workdays = []
+    curr = start_d
+    while curr <= end_d:
+        if curr.weekday() < 5:  # 0-ден 4-ке дейін (Дүйсенбі - Жұма)
+            workdays.append(curr.isoformat())
+        curr += timedelta(days=1)
+        
+    if not workdays:
+        workdays = [date(2026, 9, 1).isoformat()]
+
+    added_count = 0
+    
+    # 3. 180 оқушыға кітап беру жазбасын жасау
+    if students and books:
+        for i in range(180):
+            st = students[i % len(students)]
+            bk = books[i % len(books)]
+            k_date = workdays[i % len(workdays)]
+            # Мерзімі 14 күннен соң
+            m_date = (date.fromisoformat(k_date) + timedelta(days=14)).isoformat()
+            
+            if DATABASE_URL:
+                db.execute("""
+                    INSERT INTO kitap_beru (kuni, okuyman_id, kitap_id, berildi, kaitaryldy, kaitaru_kuni, merzim)
+                    VALUES (%s, %s, %s, 'Иә', 'Жоқ', '', %s)
+                """, (k_date, st["id"], bk["id"], m_date))
+            else:
+                db.execute("""
+                    INSERT INTO kitap_beru (kuni, okuyman_id, kitap_id, berildi, kaitaryldy, kaitaru_kuni, merzim)
+                    VALUES (?, ?, ?, 'Иә', 'Жоқ', '', ?)
+                """, (k_date, st["id"], bk["id"], m_date))
+            added_count += 1
+
+    # 4. 53 мұғалімге кітап беру жазбасын жасау
+    if teachers and books:
+        for i in range(53):
+            tc = teachers[i % len(teachers)]
+            bk = books[(i + 5) % len(books)]
+            k_date = workdays[(i * 2) % len(workdays)]
+            m_date = (date.fromisoformat(k_date) + timedelta(days=14)).isoformat()
+            
+            if DATABASE_URL:
+                db.execute("""
+                    INSERT INTO kitap_beru (kuni, okuyman_id, kitap_id, berildi, kaitaryldy, kaitaru_kuni, merzim)
+                    VALUES (%s, %s, %s, 'Иә', 'Жоқ', '', %s)
+                """, (k_date, tc["id"], bk["id"], m_date))
+            else:
+                db.execute("""
+                    INSERT INTO kitap_beru (kuni, okuyman_id, kitap_id, berildi, kaitaryldy, kaitaru_kuni, merzim)
+                    VALUES (?, ?, ?, 'Иә', 'Жоқ', '', ?)
+                """, (k_date, tc["id"], bk["id"], m_date))
+            added_count += 1
+
+    db.commit()
+    db.close()
+    
+    return f"""
+    <h2>Сәтті орындалды!</h2>
+    <p>Қыркүйек айынан бері (сенбі-жексенбісіз) <b>180 оқушы</b> мен <b>53 мұғалімге</b> барлығы <b>{added_count}</b> кітап беру жазбасы қосылды.</p>
+    <a href="/loans">Кітап беру тізіміне көшу</a> | <a href="/">Басты бетке қайту</a>
+    """
 
 # ОҚЫРМАНДЫ ӨШІРУ
 @app.route("/readers/delete/<int:reader_id>", methods=["POST"])
@@ -1285,6 +1368,8 @@ def report():
 # =========================================================
 @app.route("/books/import", methods=["GET", "POST"])
 def import_books():
+    if DATABASE_URL is not None:
+        pass
     if not is_librarian():
         return redirect(url_for("login"))
     message = ""
