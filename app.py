@@ -426,11 +426,14 @@ def home():
                 <div class="number danger">{{ overdue }}</div>
             </div>
         </div>
-        <div class="menu">
-            <a class="button" href="/readers">ОҚЫРМАНДАР</a>
-            <a class="button" href="/books">КІТАПТАР</a>
-            <a class="button" href="/loans">КІТАП БЕРУ</a>
-        </div>
+        
+<div class="menu">
+    <a class="button" href="/readers">ОҚЫРМАНДАР</a>
+    <a class="button" href="/books">КІТАПТАР</a>
+    <a class="button" href="/loans">КІТАП БЕРУ</a>
+    <a class="button" href="/rating">🏆 КІТАП ОҚУ РЕЙТИНГІ</a>
+</div>
+
     </body>
     </html>
     """,
