@@ -1498,10 +1498,13 @@ def rating():
         <meta charset="UTF-8">
         <title>Кітап оқу рейтингі</title>
         <style>
-            body { font-family: Arial, sans-serif; background: #f2f2f2; padding: 20px; max-width: 900px; margin: auto; }
-            h1, h2 { text-align: center; }
-            table { width: 100%; background: white; border-collapse: collapse; margin-top: 15px; margin-bottom: 30px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
-            th, td { padding: 12px; border: 1px solid #ccc; text-align: center; }
+            body { font-family: Arial, sans-serif; background: #f2f2f2; padding: 20px; max-width: 1300px; margin: auto; }
+            h1 { text-align: center; margin-bottom: 30px; }
+            .container { display: flex; flex-wrap: wrap; gap: 30px; justify-content: center; }
+            .column { flex: 1; min-width: 450px; background: white; padding: 20px; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+            h2 { text-align: center; color: #1e3a8a; margin-top: 0; }
+            table { width: 100%; border-collapse: collapse; margin-top: 15px; }
+            th, td { padding: 10px; border: 1px solid #ccc; text-align: center; }
             th { background: #2563eb; color: white; }
             tr:nth-child(even) { background: #f9f9f9; }
             .back { display: block; text-align: center; margin-top: 30px; font-size: 18px; text-decoration: none; color: #2563eb; }
@@ -1510,49 +1513,57 @@ def rating():
     <body>
         <h1>🏆 Кітап оқу рейтингі</h1>
 
-        <h2>👨‍🎓 Оқушылар рейтингі</h2>
-        <table>
-            <tr>
-                <th>Орын</th>
-                <th>Аты-жөні</th>
-                <th>Сыныбы</th>
-                <th>Оқыған кітап саны</th>
-            </tr>
-            {% for r in top_students %}
-            <tr>
-                <td><b>{{ loop.index }}</b></td>
-                <td>{{ r['aty'] }}</td>
-                <td>{{ r['synyp'] }}</td>
-                <td>{{ r['oxylgan_kitap_sany'] }}</td>
-            </tr>
-            {% else %}
-            <tr>
-                <td colspan="4">Әзірге деректер жоқ</td>
-            </tr>
-            {% endfor %}
-        </table>
+        <div class="container">
+            <!-- Оқушылар бөлімі -->
+            <div class="column">
+                <h2>👨‍🎓 Оқушылар рейтингі</h2>
+                <table>
+                    <tr>
+                        <th>Орын</th>
+                        <th>Аты-жөні</th>
+                        <th>Сыныбы</th>
+                        <th>Оқыған кітап</th>
+                    </tr>
+                    {% for r in top_students %}
+                    <tr>
+                        <td><b>{{ loop.index }}</b></td>
+                        <td>{{ r['aty'] }}</td>
+                        <td>{{ r['synyp'] }}</td>
+                        <td>{{ r['oxylgan_kitap_sany'] }}</td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="4">Әзірге деректер жоқ</td>
+                    </tr>
+                    {% endfor %}
+                </table>
+            </div>
 
-        <h2>👩‍🏫 Мұғалімдер рейтингі</h2>
-        <table>
-            <tr>
-                <th>Орын</th>
-                <th>Аты-жөні</th>
-                <th>Қызметі / Сыныбы</th>
-                <th>Оқыған кітап саны</th>
-            </tr>
-            {% for t in top_teachers %}
-            <tr>
-                <td><b>{{ loop.index }}</b></td>
-                <td>{{ t['aty'] }}</td>
-                <td>{{ t['synyp'] }}</td>
-                <td>{{ t['oxylgan_kitap_sany'] }}</td>
-            </tr>
-            {% else %}
-            <tr>
-                <td colspan="4">Әзірге деректер жоқ</td>
-            </tr>
-            {% endfor %}
-        </table>
+            <!-- Мұғалімдер бөлімі -->
+            <div class="column">
+                <h2>👩‍🏫 Мұғалімдер рейтингі</h2>
+                <table>
+                    <tr>
+                        <th>Орын</th>
+                        <th>Аты-жөні</th>
+                        <th>Қызметі / Сыныбы</th>
+                        <th>Оқыған кітап</th>
+                    </tr>
+                    {% for t in top_teachers %}
+                    <tr>
+                        <td><b>{{ loop.index }}</b></td>
+                        <td>{{ t['aty'] }}</td>
+                        <td>{{ t['synyp'] }}</td>
+                        <td>{{ t['oxylgan_kitap_sany'] }}</td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="4">Әзірге деректер жоқ</td>
+                    </tr>
+                    {% endfor %}
+                </table>
+            </div>
+        </div>
 
         <a class="back" href="/">← Басты бетке қайту</a>
     </body>
