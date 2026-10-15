@@ -490,7 +490,6 @@ def auto_fill_loans():
         return "Бұл бөлімге тек кітапханашы кіре алады", 403
     db = get_db()
     
-    # 0-сыныптарды дерекқордан түгелдей алып тастау
     if DATABASE_URL:
         db.execute("""
             DELETE FROM okuyandar 
@@ -1015,7 +1014,7 @@ def delete_loan(loan_id):
         db.close()
     return redirect(url_for("loans"))
 
-# КІТАП БЕРУ (ГОРИЗОНТАЛЬДЫ СКРОЛЛ АЛЫП ТАСТАЛДЫ, КЕСТЕ ЭКРАНҒА СЫЙЫҚТЫ ЕТІП ЖӨНДЕЛДІ)
+# КІТАП БЕРУ (СЫНЫБЫ ЖӘНЕ КІТАПТЫ ӨЗГЕРТУ БАТЫРМАСЫ ҚОСЫЛДЫ)
 @app.route("/loans")
 def loans():
     if not is_logged_in():
@@ -1025,6 +1024,7 @@ def loans():
         SELECT
             kitap_beru.*,
             okuyandar.aty AS okuyman_aty,
+            okuyandar.synyp AS okuyman_synyby,
             kitaptar.ataui AS kitap_atay
         FROM kitap_beru
         JOIN okuyandar
@@ -1046,7 +1046,7 @@ def loans():
                 font-family: Arial, sans-serif;
                 padding: 15px;
                 background: #eaf2ff url('/static/library-bg.jpg') center / cover fixed no-repeat;
-                max-width: 1200px;
+                max-width: 1250px;
                 margin: 0 auto;
                 box-sizing: border-box;
             }
@@ -1082,14 +1082,15 @@ def loans():
                 color: #1e293b;
                 font-weight: bold;
             }
-            /* Баған ендерін экранға оңтайлы сыйғызу */
-            th:nth-child(1), td:nth-child(1) { width: 6%; }   /* ID */
-            th:nth-child(2), td:nth-child(2) { width: 12%; }  /* Күні */
-            th:nth-child(3), td:nth-child(3) { width: 22%; }  /* Оқырман */
-            th:nth-child(4), td:nth-child(4) { width: 22%; }  /* Кітап */
-            th:nth-child(5), td:nth-child(5) { width: 10%; }  /* Берілді */
-            th:nth-child(6), td:nth-child(6) { width: 10%; }  /* Қайтарылды */
-            th:nth-child(7), td:nth-child(7) { width: 18%; }  /* Мерзімі / Әрекет */
+            /* Баған ендері */
+            th:nth-child(1), td:nth-child(1) { width: 5%; }   /* ID */
+            th:nth-child(2), td:nth-child(2) { width: 11%; }  /* Күні */
+            th:nth-child(3), td:nth-child(3) { width: 20%; }  /* Оқырман */
+            th:nth-child(4), td:nth-child(4) { width: 9%; }   /* Сыныбы */
+            th:nth-child(5), td:nth-child(5) { width: 21%; }  /* Кітап */
+            th:nth-child(6), td:nth-child(6) { width: 8%; }   /* Бер. */
+            th:nth-child(7), td:nth-child(7) { width: 8%; }   /* Қайт. */
+            th:nth-child(8), td:nth-child(8) { width: 18%; }  /* Мерзімі / Әрекет */
 
             .overdue {
                 background: #ffcccc !important;
@@ -1123,6 +1124,7 @@ def loans():
                 <th>ID</th>
                 <th>Күні</th>
                 <th>Оқырман</th>
+                <th>Сыныбы</th>
                 <th>Кітап</th>
                 <th>Бер.</th>
                 <th>Қайт.</th>
@@ -1133,6 +1135,7 @@ def loans():
                 <td>{{ loan["id"] }}</td>
                 <td>{{ loan["kuni"] }}</td>
                 <td>{{ loan["okuyman_aty"] }}</td>
+                <td>{{ loan["okuyman_synyby"] }}</td>
                 <td>{{ loan["kitap_atay"] }}</td>
                 <td>{{ loan["berildi"] }}</td>
                 <td>{{ loan["kaitaryldy"] }}</td>
@@ -1140,7 +1143,8 @@ def loans():
                     {{ loan["merzim"] }}
                     {% if session.get("role") == "librarian" %}
                         <br>
-                        <a href="/loans/edit/{{ loan['id'] }}" style="font-size:11px;">Өзгерту</a>
+                        <a href="/loans/edit/{{ loan['id'] }}" style="font-size:11px;">Мерзімін өзгерту</a><br>
+                        <a href="/loans/edit-book/{{ loan['id'] }}" style="font-size:11px; color:#16a34a; font-weight:bold;">Кітапты өзгерту</a>
                         <hr style="margin: 3px 0; border:0; border-top:1px solid #ccc;">
                         {% if loan["kaitaryldy"] == "Жоқ" %}
                             <form method="POST" action="/loans/return/{{ loan['id'] }}" style="display:inline;">
@@ -1248,6 +1252,67 @@ def edit_loan(loan_id):
     </body>
     </html>
     """, loan=loan)
+
+# КІТАПТЫ ӨЗГЕРТУ (АУЫСТЫРУ)
+@app.route("/loans/edit-book/<int:loan_id>", methods=["GET", "POST"])
+def edit_loan_book(loan_id):
+    if not is_librarian():
+        return "Бұл бөлімге тек кітапханашы кіре алады", 403
+    db = get_db()
+    loan = db.execute("""
+        SELECT * FROM kitap_beru WHERE id = %s
+    """ if DATABASE_URL else """
+        SELECT * FROM kitap_beru WHERE id = ?
+    """, (loan_id,)).fetchone()
+    if not loan:
+        db.close()
+        return "Жазба табылмады", 404
+
+    books = db.execute("SELECT * FROM kitaptar ORDER BY ataui").fetchall()
+    if request.method == "POST":
+        new_book_id = request.form["kitap_id"]
+        if DATABASE_URL:
+            db.execute("""
+                UPDATE kitap_beru SET kitap_id = %s WHERE id = %s
+            """, (new_book_id, loan_id))
+        else:
+            db.execute("""
+                UPDATE kitap_beru SET kitap_id = ? WHERE id = ?
+            """, (new_book_id, loan_id))
+        db.commit()
+        db.close()
+        return redirect(url_for("loans"))
+    db.close()
+    return render_template_string("""
+    <!DOCTYPE html>
+    <html lang="kk">
+    <head>
+        <meta charset="UTF-8">
+        <title>Кітапты өзгерту</title>
+        <style>
+            body { font-family: Arial; padding: 30px; background: #f2f2f2; }
+            .box { max-width: 400px; margin: auto; background: white; padding: 25px; border-radius: 10px; box-shadow: 0 2px 8px #0001; }
+            select, button { width: 100%; padding: 10px; margin-top: 10px; margin-bottom: 20px; }
+            button { background: #2563eb; color: white; border: 0; border-radius: 6px; cursor: pointer; font-weight: bold; }
+        </style>
+    </head>
+    <body>
+        <div class="box">
+            <h2>📖 Кітапты ауыстыру</h2>
+            <form method="POST">
+                <label>Жаңа кітапты таңдаңыз:</label>
+                <select name="kitap_id" required>
+                    {% for book in books %}
+                        <option value="{{ book.id }}" {% if book.id == loan.kitap_id %}selected{% endif %}>{{ book.ataui }}</option>
+                    {% endfor %}
+                </select>
+                <button type="submit">САҚТАУ</button>
+            </form>
+            <a href="/loans">← Қайту</a>
+        </div>
+    </body>
+    </html>
+    """, loan=loan, books=books)
 
 # КІТАП БЕРУ — ҚОСУ
 @app.route("/loans/add", methods=["GET", "POST"])
