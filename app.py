@@ -1453,26 +1453,44 @@ def reset_readers():
     """
 
 # =========================================================
-# 3. ОҚЫРМАНДАР РЕЙТИНГІ (/rating)
+# 3. ОҚЫРМАНДАР МЕН МҰҒАЛІМДЕРДІҢ РЕЙТИНГІ (/rating)
 # =========================================================
 @app.route("/rating")
 def rating():
     if not is_logged_in():
         return redirect(url_for("login"))
     db = get_db()
-    top_readers = db.execute("""
+    
+    # Оқушылардың рейтингі
+    top_students = db.execute("""
         SELECT 
             okuyandar.aty, 
             okuyandar.synyp, 
             COUNT(kitap_beru.id) AS oxylgan_kitap_sany
         FROM kitap_beru
         JOIN okuyandar ON kitap_beru.okuyman_id = okuyandar.id
-        WHERE kitap_beru.berildi = 'Иә'
+        WHERE kitap_beru.berildi = 'Иә' AND okuyandar.turi = 'Оқушы'
         GROUP BY okuyandar.id, okuyandar.aty, okuyandar.synyp
         ORDER BY oxylgan_kitap_sany DESC
         LIMIT 20
     """).fetchall()
+
+    # Мұғалімдердің рейтингі
+    top_teachers = db.execute("""
+        SELECT 
+            okuyandar.aty, 
+            okuyandar.synyp, 
+            COUNT(kitap_beru.id) AS oxylgan_kitap_sany
+        FROM kitap_beru
+        JOIN okuyandar ON kitap_beru.okuyman_id = okuyandar.id
+        WHERE kitap_beru.berildi = 'Иә' AND okuyandar.turi = 'Мұғалім'
+        GROUP BY okuyandar.id, okuyandar.aty, okuyandar.synyp
+        ORDER BY oxylgan_kitap_sany DESC
+        LIMIT 20
+    """).fetchall()
+
     db.close()
+    
     return render_template_string("""
     <!DOCTYPE html>
     <html lang="kk">
@@ -1481,8 +1499,8 @@ def rating():
         <title>Кітап оқу рейтингі</title>
         <style>
             body { font-family: Arial, sans-serif; background: #f2f2f2; padding: 20px; max-width: 900px; margin: auto; }
-            h1 { text-align: center; }
-            table { width: 100%; background: white; border-collapse: collapse; margin-top: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+            h1, h2 { text-align: center; }
+            table { width: 100%; background: white; border-collapse: collapse; margin-top: 15px; margin-bottom: 30px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
             th, td { padding: 12px; border: 1px solid #ccc; text-align: center; }
             th { background: #2563eb; color: white; }
             tr:nth-child(even) { background: #f9f9f9; }
@@ -1490,7 +1508,9 @@ def rating():
         </style>
     </head>
     <body>
-        <h1>🏆 Ең белсенді оқырмандар рейтингі</h1>
+        <h1>🏆 Кітап оқу рейтингі</h1>
+
+        <h2>👨‍🎓 Оқушылар рейтингі</h2>
         <table>
             <tr>
                 <th>Орын</th>
@@ -1498,19 +1518,46 @@ def rating():
                 <th>Сыныбы</th>
                 <th>Оқыған кітап саны</th>
             </tr>
-            {% for r in top_readers %}
+            {% for r in top_students %}
             <tr>
                 <td><b>{{ loop.index }}</b></td>
                 <td>{{ r['aty'] }}</td>
                 <td>{{ r['synyp'] }}</td>
                 <td>{{ r['oxylgan_kitap_sany'] }}</td>
             </tr>
+            {% else %}
+            <tr>
+                <td colspan="4">Әзірге деректер жоқ</td>
+            </tr>
             {% endfor %}
         </table>
+
+        <h2>👩‍🏫 Мұғалімдер рейтингі</h2>
+        <table>
+            <tr>
+                <th>Орын</th>
+                <th>Аты-жөні</th>
+                <th>Қызметі / Сыныбы</th>
+                <th>Оқыған кітап саны</th>
+            </tr>
+            {% for t in top_teachers %}
+            <tr>
+                <td><b>{{ loop.index }}</b></td>
+                <td>{{ t['aty'] }}</td>
+                <td>{{ t['synyp'] }}</td>
+                <td>{{ t['oxylgan_kitap_sany'] }}</td>
+            </tr>
+            {% else %}
+            <tr>
+                <td colspan="4">Әзірге деректер жоқ</td>
+            </tr>
+            {% endfor %}
+        </table>
+
         <a class="back" href="/">← Басты бетке қайту</a>
     </body>
     </html>
-    """, top_readers=top_readers)
+    """, top_students=top_students, top_teachers=top_teachers)
 
 # =========================================================
 # 4. ЕҢ КӨП БЕРІЛГЕН КІТАПТАР РЕЙТИНГІ (/book-rating)
