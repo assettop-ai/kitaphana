@@ -706,6 +706,26 @@ def readers():
     if not is_logged_in():
         return redirect(url_for("login"))
     db = get_db()
+        # Оқырман аты-жөнінің басындағы реттік нөмірлерді тазарту
+    rows = db.execute("SELECT id, aty FROM okuyandar").fetchall()
+
+    for row in rows:
+        old_name = row["aty"] or ""
+        new_name = re.sub(r'^\s*\d+\s*[\.\)]\s*', '', old_name).strip()
+
+        if new_name != old_name:
+            if DATABASE_URL:
+                db.execute(
+                    "UPDATE okuyandar SET aty = %s WHERE id = %s",
+                    (new_name, row["id"])
+                )
+            else:
+                db.execute(
+                    "UPDATE okuyandar SET aty = ? WHERE id = ?",
+                    (new_name, row["id"])
+                )
+
+    db.commit()
     try:
         readers = db.execute("""
             SELECT *
