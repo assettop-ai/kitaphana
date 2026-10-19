@@ -1,27 +1,22 @@
+
 <!DOCTYPE html>
 <html lang="kk">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Оқырмандар</title>
+
     <style>
         body {
-            font-family: Arial;
+            font-family: Arial, sans-serif;
             padding: 20px;
             background: #f2f2f2;
         }
-        table {
-            width: 100%;
-            background: white;
-            border-collapse: collapse;
+
+        h1 {
+            color: #333;
         }
-        th, td {
-            padding: 10px;
-            border: 1px solid #ccc;
-            text-align: center;
-        }
-        th {
-            background: #eeeeee;
-        }
+
         .add {
             display: inline-block;
             padding: 12px 18px;
@@ -29,35 +24,97 @@
             text-decoration: none;
             color: black;
             border-radius: 8px;
-            margin-bottom: 20px;
+            margin: 0 8px 12px 0;
+            border: 1px solid #ddd;
+        }
+
+        .delete-all {
+            display: inline-block;
+            padding: 12px 18px;
+            background: #dc3545;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            margin: 0 8px 12px 0;
+        }
+
+        .delete-all:hover {
+            background: #b02a37;
+        }
+
+        .table-wrap {
+            overflow-x: auto;
+        }
+
+        table {
+            width: 100%;
+            background: white;
+            border-collapse: collapse;
+        }
+
+        th, td {
+            padding: 10px;
+            border: 1px solid #ccc;
+            text-align: center;
+        }
+
+        th {
+            background: #eeeeee;
         }
     </style>
 </head>
+
 <body>
     <h1>ОҚЫРМАНДАР</h1>
 
     {% if session.get("role") == "librarian" %}
-    <a class="add" href="/readers/add">+ ОҚЫРМАН ҚОСУ</a>
-    <a class="add" href="/readers/import">📥 EXCEL-ДЕН ЖҮКТЕУ</a>
+        <a class="add" href="/readers/add">
+            + ОҚЫРМАН ҚОСУ
+        </a>
+
+        <a class="add" href="/readers/import">
+            📥 EXCEL-ДЕН ЖҮКТЕУ
+        </a>
+
+        <form method="POST"
+              action="{{ url_for('reset_readers') }}"
+              style="display:inline"
+              onsubmit="return confirm('НАЗАР АУДАР! Барлық оқырман мен кітап беру жазбалары толық өшіріледі. Кітаптар сақталады. Жалғастырасыз ба?');">
+
+            <button type="submit" class="delete-all">
+                🗑 БАРЛЫҚ ОҚЫРМАНДЫ ТАЗАЛАУ
+            </button>
+        </form>
     {% endif %}
 
-    <table>
-        <tr>
-            <th>ID</th>
-            <th>Аты-жөні</th>
-            <th>Сыныбы</th>
-            <th>Түрі</th>
-        </tr>
+    <div class="table-wrap">
+        <table>
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Аты-жөні</th>
+                    <th>Сыныбы / пәні</th>
+                    <th>Түрі</th>
+                </tr>
+            </thead>
 
-        {% for reader in readers %}
-        <tr>
-            <td>{{ reader["id"] }}</td>
-            <td>{{ reader["aty"] }}</td>
-            <td>{{ reader["synyp"] }}</td>
-            <td>{{ reader["turi"] }}</td>
-        </tr>
-        {% endfor %}
-    </table>
+            <tbody>
+                {% for reader in readers %}
+                <tr>
+                    <td>{{ reader["id"] }}</td>
+                    <td>{{ reader["aty"] }}</td>
+                    <td>{{ reader["synyp"] }}</td>
+                    <td>{{ reader["turi"] }}</td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="4">Оқырмандар тізімі бос.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
 
     <br>
     <a href="/">← Басты бет</a>
