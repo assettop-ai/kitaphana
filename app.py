@@ -395,7 +395,7 @@ def home():
         <style>
             body {
                 font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-                background: center / cover fixed no-repeat;
+                background: #eaf2ff url('/static/library-bg.jpg') center / cover fixed no-repeat;
                 margin: 0;
                 padding: 30px 20px;
                 min-height: 100vh;
