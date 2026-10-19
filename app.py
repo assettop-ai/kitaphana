@@ -840,19 +840,29 @@ def loans():
         {% endif %}
 
         <h3>Берілген кітаптар тізімі</h3>
-        <table>
-            <tr>
-                <th>ID</th>
-                <th>Оқырман</th>
-                <th>Сыныбы / Пәні</th>
-                <th>Кітап атауы</th>
-                <th>Берілген күні</th>
-                <th>Мерзімі</th>
-                <th>Қайтарылды ма?</th>
-                <th>Әрекет</th>
+        
+            <table style="
+                width: 100%;
+                border-collapse: collapse;
+                background: white;
+                border-radius: 12px;
+                overflow: hidden;
+                box-shadow: 0 4px 15px rgba(0,0,0,0.08);
+                font-family: Arial, sans-serif;
+            ">
+
+            
+            <tr style="background: #1e40af; color: white;">
+                <th style="padding: 14px 10px;">ID</th>
+                <th style="padding: 14px 10px;">Оқырман</th>
+                <th style="padding: 14px 10px;">Сыныбы / Пәні</th>
+                <th style="padding: 14px 10px;">Кітап атауы</th>
+                <th style="padding: 14px 10px;">Берілген күні</th>
+                <th style="padding: 14px 10px;">Мерзімі</th>
+                <th style="padding: 14px 10px;">Қайтарылды ма?</th>
+                <th style="padding: 14px 10px;">Әрекет</th>
             </tr>
-            {% for l in loans_list %}
-            <tr>
+
                 <td>{{ l['id'] }}</td>
                 <td>{{ l['okuyhan_aty'] }}</td>
                 <td>{{ l['synyp'] }}</td>
