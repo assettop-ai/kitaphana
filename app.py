@@ -1193,7 +1193,15 @@ def rating():
     """
     for i, row in enumerate(rows, 1):
         bg = "#f8fafc" if i % 2 == 0 else "white"
-        html += f"<tr style='background:{bg}; text-align:center;'><td>{i}</td><td style='text-align:left; padding-left:20px;'><b>{row['aty']}</b></td><td>{row['synyp'] or ''}</td><td><span style='color:#2563eb; font-weight:bold;'>{row['kitap_sany']}</span></td></tr>"
+        if i == 1:
+            pos_display = "🥇 1"
+        elif i == 2:
+            pos_display = "🥈 2"
+        elif i == 3:
+            pos_display = "🥉 3"
+        else:
+            pos_display = str(i)
+        html += f"<tr style='background:{bg}; text-align:center;'><td>{pos_display}</td><td style='text-align:left; padding-left:20px;'><b>{row['aty']}</b></td><td>{row['synyp'] or ''}</td><td><span style='color:#2563eb; font-weight:bold;'>{row['kitap_sany']}</span></td></tr>"
     html += "</table></body></html>"
     return html
 
@@ -1228,7 +1236,15 @@ def teacher_rating():
     """
     for i, row in enumerate(rows, 1):
         bg = "#f8fafc" if i % 2 == 0 else "white"
-        html += f"<tr style='background:{bg}; text-align:center;'><td>{i}</td><td style='text-align:left; padding-left:20px;'><b>{row['aty']}</b></td><td>{row['synyp'] or ''}</td><td><span style='color:#2563eb; font-weight:bold;'>{row['kitap_sany']}</span></td></tr>"
+        if i == 1:
+            pos_display = "🥇 1"
+        elif i == 2:
+            pos_display = "🥈 2"
+        elif i == 3:
+            pos_display = "🥉 3"
+        else:
+            pos_display = str(i)
+        html += f"<tr style='background:{bg}; text-align:center;'><td>{pos_display}</td><td style='text-align:left; padding-left:20px;'><b>{row['aty']}</b></td><td>{row['synyp'] or ''}</td><td><span style='color:#2563eb; font-weight:bold;'>{row['kitap_sany']}</span></td></tr>"
     html += "</table></body></html>"
     return html
 
@@ -1262,7 +1278,15 @@ def book_rating():
     """
     for i, row in enumerate(rows, 1):
         bg = "#f8fafc" if i % 2 == 0 else "white"
-        html += f"<tr style='background:{bg}; text-align:center;'><td>{i}</td><td>{row['kitap_id']}</td><td style='text-align:left; padding-left:20px;'><b>{row['ataui']}</b></td><td>{row['avtor'] or ''}</td><td><span style='color:#2563eb; font-weight:bold;'>{row['alu_sany']}</span></td></tr>"
+        if i == 1:
+            pos_display = "🥇 1"
+        elif i == 2:
+            pos_display = "🥈 2"
+        elif i == 3:
+            pos_display = "🥉 3"
+        else:
+            pos_display = str(i)
+        html += f"<tr style='background:{bg}; text-align:center;'><td>{pos_display}</td><td>{row['kitap_id']}</td><td style='text-align:left; padding-left:20px;'><b>{row['ataui']}</b></td><td>{row['avtor'] or ''}</td><td><span style='color:#2563eb; font-weight:bold;'>{row['alu_sany']}</span></td></tr>"
     html += "</table></body></html>"
     return html
 
