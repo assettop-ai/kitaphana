@@ -558,16 +558,32 @@ def home():
                 max-width: 1100px;
                 margin: 0 auto;
             }
-            h1 {
+            .header-box {
                 text-align: center;
-                color: #ffffff;
                 background: linear-gradient(135deg, #1e3a8a, #2563eb);
                 padding: 25px 30px;
                 border-radius: 18px;
-                letter-spacing: 1.5px;
                 box-shadow: 0 10px 30px rgba(37,99,235,0.25);
                 margin-bottom: 40px;
-                font-size: 28px;
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                gap: 15px;
+            }
+            .header-logo {
+                width: 90px;
+                height: 90px;
+                border-radius: 50%;
+                object-fit: cover;
+                background: white;
+                box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+                border: 3px solid rgba(255,255,255,0.8);
+            }
+            h1 {
+                margin: 0;
+                color: #ffffff;
+                letter-spacing: 1.5px;
+                font-size: 26px;
             }
             .cards {
                 display: grid;
@@ -636,7 +652,10 @@ def home():
     </head>
     <body>
         <div class="container">
-            <h1>📚 МЕКТЕП КІТАПХАНАСЫ</h1>
+            <div class="header-box">
+                <img src="/static/emblem.png" alt="Эмблема" class="header-logo">
+                <h1>МЕКТЕП КІТАПХАНАСЫ БАСҚАРУ ЖҮЙЕСІ</h1>
+            </div>
             
             <div class="cards">
                 <div class="card">
