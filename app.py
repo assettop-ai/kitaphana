@@ -962,7 +962,7 @@ def readers():
             FROM okuyandar
             WHERE (synyp NOT LIKE '0%' AND synyp != '0' AND LOWER(synyp) NOT LIKE '%даярлық%')
                OR turi = 'Мұғалім'
-            ORDER BY id DESC
+            ORDER BY aty ASC
         """).fetchall()
     finally:
         db.close()
