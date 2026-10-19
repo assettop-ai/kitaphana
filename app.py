@@ -1075,6 +1075,426 @@ def readers():
 </html>
 """, readers=readers)
 
+# =========================================================
+# 170 ОҚЫРМАНҒА КІТАП БЕРУДІ АЛДЫН АЛА ЖОСПАРЛАУ
+# =========================================================
+
+def auto_plan_date(index):
+    """Әр 5 оқырманға бір жұмыс күнін тағайындайды."""
+    day = date(2026, 9, 1)
+    target_group = index // 5
+    workday_count = 0
+
+    while True:
+        if day.weekday() < 5:
+            if workday_count == target_group:
+                return day.isoformat()
+            workday_count += 1
+
+        day += timedelta(days=1)
+
+
+def auto_book_score(reader, book):
+    """Оқырманға кітаптың сәйкестігін бағалайды."""
+    subject = (reader["synyp"] or "").casefold()
+    reader_type = (reader["turi"] or "").casefold()
+    title = (book["ataui"] or "").casefold()
+    category = (book["sanat"] or "").casefold()
+    text = title + " " + category
+
+    is_teacher = "мұғалім" in reader_type
+
+    # Ағылшын тілі мұғаліміне ағылшын тіліне қатысты кітап
+    if is_teacher and any(
+        word in subject
+        for word in ("ағылшын", "английский", "english")
+    ):
+        if any(
+            word in text
+            for word in ("english", "английский", "ағылшын")
+        ):
+            return 10
+        return 0
+
+    # Қазақ тілі немесе әдебиет мұғаліміне
+    if is_teacher and any(
+        word in subject
+        for word in ("қазақ тілі", "қазақ әдебиеті", "әдебиет")
+    ):
+        if any(
+            word in text
+            for word in (
+                "қазақ", "әдебиет", "поэзия",
+                "өлең", "роман", "әңгіме", "шығармалар"
+            )
+        ):
+            return 10
+        return 0
+
+    # Бастауыш сыныптарға ертегі және балалар әдебиеті
+    import re
+    match = re.search(r"\d{1,2}", subject)
+    grade = int(match.group()) if match else None
+
+    if not is_teacher and grade is not None and grade <= 4:
+        if any(
+            word in text
+            for word in (
+                "ертегі", "ертегілер", "балалар",
+                "қызыл телпек", "әжемнің ертегілері",
+                "аққу қаздар", "балаларға арналған"
+            )
+        ):
+            return 10
+        return 0
+
+    # Басқа оқырмандарға қолжетімді кітап
+    return 5
+
+
+@app.route("/loans/auto-plan", methods=["GET", "POST"])
+def loans_auto_plan():
+    if not is_logged_in():
+        return redirect(url_for("login"))
+
+    if not is_librarian():
+        return "Бұл бөлімге тек кітапханашы кіре алады", 403
+
+    db = get_db()
+    rows = []
+    message = session.pop("auto_plan_message", "")
+    ready = False
+
+    try:
+        if request.method == "POST" and request.form.get("action") == "preview":
+            readers = db.execute("""
+                SELECT id, aty, synyp, turi
+                FROM okuyandar
+                WHERE (
+                    synyp NOT LIKE '0%'
+                    AND synyp != '0'
+                    AND LOWER(synyp) NOT LIKE '%даярлық%'
+                ) OR turi = 'Мұғалім'
+                ORDER BY aty ASC
+            """).fetchall()
+
+            books = db.execute("""
+                SELECT id, kitap_id, ataui, avtor, sanat, jalpy_sany
+                FROM kitaptar
+                ORDER BY ataui ASC
+            """).fetchall()
+
+            active = db.execute("""
+                SELECT kitap_id, COUNT(*) AS саны
+                FROM kitap_beru
+                WHERE berildi = 'Иә'
+                  AND COALESCE(kaitaryldy, 'Жоқ') <> 'Иә'
+                GROUP BY kitap_id
+            """).fetchall()
+
+            active_books = {
+                int(row["kitap_id"]): int(row["саны"])
+                for row in active
+            }
+
+            active_readers_rows = db.execute("""
+                SELECT DISTINCT okuyman_id
+                FROM kitap_beru
+                WHERE berildi = 'Иә'
+                  AND COALESCE(kaitaryldy, 'Жоқ') <> 'Иә'
+            """).fetchall()
+
+            active_readers = {
+                int(row["okuyman_id"])
+                for row in active_readers_rows
+            }
+
+            stock = {}
+            for book in books:
+                book_id = int(book["id"])
+                total = int(book["jalpy_sany"] or 0)
+                stock[book_id] = max(
+                    0, total - active_books.get(book_id, 0)
+                )
+
+            assignments = []
+            used_counts = {}
+            assigned_rows = []
+
+            for index, reader in enumerate(readers):
+                reader_id = int(reader["id"])
+                issue_date = auto_plan_date(index)
+
+                if reader_id in active_readers:
+                    rows.append({
+                        "aty": reader["aty"],
+                        "synyp": reader["synyp"],
+                        "kuni": issue_date,
+                        "book": "Қазір қолында кітап бар",
+                        "status": "Тағайындалмады"
+                    })
+                    continue
+
+                candidates = []
+
+                for book in books:
+                    book_id = int(book["id"])
+                    available = stock.get(book_id, 0)
+
+                    if available <= used_counts.get(book_id, 0):
+                        continue
+
+                    score = auto_book_score(reader, book)
+                    if score > 0:
+                        candidates.append(
+                            (score, available, book)
+                        )
+
+                if not candidates:
+                    rows.append({
+                        "aty": reader["aty"],
+                        "synyp": reader["synyp"],
+                        "kuni": issue_date,
+                        "book": "Сәйкес бос кітап табылмады",
+                        "status": "Тексеру керек"
+                    })
+                    continue
+
+                candidates.sort(
+                    key=lambda item: (
+                        item[0],
+                        item[1],
+                        -used_counts.get(int(item[2]["id"]), 0)
+                    ),
+                    reverse=True
+                )
+
+                book = candidates[0][2]
+                book_id = int(book["id"])
+                used_counts[book_id] = (
+                    used_counts.get(book_id, 0) + 1
+                )
+
+                assignments.append([reader_id, book_id])
+                assigned_rows.append({
+                    "aty": reader["aty"],
+                    "synyp": reader["synyp"],
+                    "kuni": issue_date,
+                    "book": book["ataui"],
+                    "status": "Жоспарланды"
+                })
+
+                rows.append(assigned_rows[-1])
+
+            # Растауға дейін тек жоспарды сессияда сақтаймыз.
+            session["auto_plan"] = assignments
+            session["auto_plan_ready"] = (
+                len(assignments) == len(readers)
+                and len(readers) > 0
+            )
+            session["auto_plan_count"] = len(readers)
+
+            ready = session["auto_plan_ready"]
+
+            message = (
+                f"Оқырман саны: {len(readers)}. "
+                f"Кітап таңдалды: {len(assignments)}. "
+                f"Қосымша тексеру керек: "
+                f"{len(readers) - len(assignments)}."
+            )
+
+        elif request.method == "POST" and request.form.get("action") == "confirm":
+            assignments = session.get("auto_plan", [])
+            expected = session.get("auto_plan_count", 0)
+
+            if (
+                not session.get("auto_plan_ready")
+                or len(assignments) != expected
+                or expected == 0
+            ):
+                message = (
+                    "Жоспар толық емес. Алдымен қайта жоспарлап, "
+                    "барлық оқырманға кітап сәйкестендіріңіз."
+                )
+            else:
+                # Растау сәтінде қорды қайта тексереміз.
+                active = db.execute("""
+                    SELECT kitap_id, COUNT(*) AS саны
+                    FROM kitap_beru
+                    WHERE berildi = 'Иә'
+                      AND COALESCE(kaitaryldy, 'Жоқ') <> 'Иә'
+                    GROUP BY kitap_id
+                """).fetchall()
+
+                active_books = {
+                    int(row["kitap_id"]): int(row["саны"])
+                    for row in active
+                }
+
+                books = db.execute("""
+                    SELECT id, jalpy_sany FROM kitaptar
+                """).fetchall()
+
+                stock = {
+                    int(book["id"]): max(
+                        0,
+                        int(book["jalpy_sany"] or 0)
+                        - active_books.get(int(book["id"]), 0)
+                    )
+                    for book in books
+                }
+
+                needed = {}
+                for reader_id, book_id in assignments:
+                    needed[book_id] = needed.get(book_id, 0) + 1
+
+                insufficient = any(
+                    needed_count > stock.get(book_id, 0)
+                    for book_id, needed_count in needed.items()
+                )
+
+                active_readers_rows = db.execute("""
+                    SELECT DISTINCT okuyman_id
+                    FROM kitap_beru
+                    WHERE berildi = 'Иә'
+                      AND COALESCE(kaitaryldy, 'Жоқ') <> 'Иә'
+                """).fetchall()
+
+                active_readers = {
+                    int(row["okuyman_id"])
+                    for row in active_readers_rows
+                }
+
+                if insufficient:
+                    message = (
+                        "Қор өзгерген: кейбір кітап жеткіліксіз. "
+                        "Жоспарды қайта құрыңыз."
+                    )
+                elif any(
+                    int(reader_id) in active_readers
+                    for reader_id, _ in assignments
+                ):
+                    message = (
+                        "Кейбір оқырманға осы аралықта кітап берілген. "
+                        "Жоспарды қайта құрыңыз."
+                    )
+                else:
+                    try:
+                        for index, (reader_id, book_id) in enumerate(assignments):
+                            kuni = auto_plan_date(index)
+                            merzim = (
+                                date.fromisoformat(kuni)
+                                + timedelta(days=14)
+                            ).isoformat()
+
+                            if DATABASE_URL:
+                                db.execute("""
+                                    INSERT INTO kitap_beru
+                                    (kuni, okuyman_id, kitap_id,
+                                     berildi, kaitaryldy,
+                                     kaitaru_kuni, merzim)
+                                    VALUES (%s, %s, %s, 'Иә', 'Жоқ', '', %s)
+                                """, (kuni, reader_id, book_id, merzim))
+                            else:
+                                db.execute("""
+                                    INSERT INTO kitap_beru
+                                    (kuni, okuyman_id, kitap_id,
+                                     berildi, kaitaryldy,
+                                     kaitaru_kuni, merzim)
+                                    VALUES (?, ?, ?, 'Иә', 'Жоқ', '', ?)
+                                """, (kuni, reader_id, book_id, merzim))
+
+                        db.commit()
+                        session.pop("auto_plan", None)
+                        session.pop("auto_plan_ready", None)
+                        session.pop("auto_plan_count", None)
+                        session["auto_plan_message"] = (
+                            f"Дайын! {len(assignments)} кітап беру жазбасы "
+                            "кітап беру тарихына енгізілді."
+                        )
+                        return redirect(url_for("loans_auto_plan"))
+
+                    except Exception:
+                        db.rollback()
+                        raise
+
+        elif request.method == "GET":
+            session.pop("auto_plan", None)
+            session.pop("auto_plan_ready", None)
+            session.pop("auto_plan_count", None)
+
+    finally:
+        db.close()
+
+    return render_template_string("""
+    <!DOCTYPE html>
+    <html lang="kk">
+    <head>
+      <meta charset="UTF-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1">
+      <title>Автоматты кітап беру жоспары</title>
+      <style>
+        body {font-family:Arial,sans-serif; margin:24px; background:#f4f6f9}
+        .box {background:white;padding:20px;border-radius:10px;margin-bottom:18px}
+        table {border-collapse:collapse;width:100%;background:white}
+        th,td {border:1px solid #ddd;padding:8px;text-align:left}
+        th {background:#2563eb;color:white}
+        button {padding:11px 16px;border:0;border-radius:6px;background:#2563eb;color:white;cursor:pointer}
+        button:disabled {background:#999}
+        .warning {color:#a33}
+        .scroll {overflow-x:auto}
+      </style>
+    </head>
+    <body>
+      <div class="box">
+        <h2>📚 Автоматты кітап беру жоспары</h2>
+        <p>Басталу күні: 01.09.2026. Күніне 5 оқырман. Сенбі-жексенбі есептелмейді.</p>
+        {% if message %}<p>{{ message }}</p>{% endif %}
+        <form method="POST">
+          <button name="action" value="preview">
+            Алдын ала жоспар құру
+          </button>
+        </form>
+        {% if rows %}
+          <h3>Алдын ала жоспар: {{ rows|length }} оқырман</h3>
+          <div class="scroll">
+          <table>
+            <tr>
+              <th>№</th><th>Оқырман</th><th>Сыныбы / пәні</th>
+              <th>Беру күні</th><th>Кітап</th><th>Мәртебе</th>
+            </tr>
+            {% for r in rows %}
+            <tr>
+              <td>{{ loop.index }}</td>
+              <td>{{ r.aty }}</td>
+              <td>{{ r.synyp }}</td>
+              <td>{{ r.kuni }}</td>
+              <td>{{ r.book }}</td>
+              <td>{{ r.status }}</td>
+            </tr>
+            {% endfor %}
+          </table>
+          </div>
+          <form method="POST" style="margin-top:18px">
+            <button name="action" value="confirm"
+              {% if not ready %}disabled{% endif %}
+              onclick="return confirm('Жоспарды растап, кітап беру тарихына енгізесіз бе?')">
+              Жоспарды растау және кітап беруді енгізу
+            </button>
+          </form>
+          {% if not ready %}
+            <p class="warning">
+              Барлық оқырманға сәйкес бос кітап табылғанша растау қолжетімсіз.
+              Тізімді тексеріп, кітап қорын толықтырыңыз немесе санаттарын түзетіңіз.
+            </p>
+          {% endif %}
+        {% endif %}
+        <p><a href="/loans">← Кітап беру бөліміне қайту</a></p>
+      </div>
+    </body>
+    </html>
+    """, rows=rows, message=message, ready=ready)
+
 if __name__ == '__main__':
     init_db()
     app.run(debug=True)
