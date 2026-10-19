@@ -860,16 +860,45 @@ def loans():
                 <th style="padding: 14px 10px;">Берілген күні</th>
                 <th style="padding: 14px 10px;">Мерзімі</th>
                 <th style="padding: 14px 10px;">Қайтарылды ма?</th>
+               
                 <th style="padding: 14px 10px;">Әрекет</th>
             </tr>
 
-                <td>{{ l['id'] }}</td>
+            {% for l in loans_list %}
+            <tr style="border-bottom: 1px solid #e5e7eb;">
+                <td style="padding: 12px 10px;">{{ l['id'] }}</td>
+
                 <td>{{ l['okuyhan_aty'] }}</td>
                 <td>{{ l['synyp'] }}</td>
                 <td>{{ l['kitap_ataui'] }}</td>
                 <td>{{ l['kuni'] }}</td>
                 <td>{{ l['merzim'] }}</td>
                 <td>{{ l['kaitaryldy'] }}</td>
+                
+                <td style="padding: 12px 10px;">
+                    {% if l['kaitaryldy'] == 'Иә' %}
+                        <span style="color: #059669; font-weight: bold;">
+                            Қайтарылды
+                        </span>
+                    {% elif session.get("role") == "librarian" %}
+                        <form method="POST"
+                              action="/loans/return/{{ l['id'] }}"
+                              style="margin: 0;">
+                            <button type="submit"
+                                    style="background: #10b981; padding: 5px 10px; font-size: 12px;">
+                                Қайтару
+                            </button>
+                        </form>
+                    {% else %}
+                        <span style="color: #dc2626; font-weight: bold;">
+                            Қайтарылмады
+                        </span>
+                    {% endif %}
+                </td>
+                </tr>
+                {% endfor %}
+                </table>
+
                 
             <td>
                 {% if l['kaitaryldy'] == 'Иә' %}
