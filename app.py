@@ -362,11 +362,10 @@ def home():
         WHERE (synyp NOT LIKE '0%' AND synyp != '0' AND LOWER(synyp) NOT LIKE '%даярлық%')
            OR turi = 'Мұғалім'
     """).fetchone()["value"]
-    currently_out = db.execute("""
+        currently_out = db.execute("""
         SELECT COUNT(*) AS value
         FROM kitap_beru
-        WHERE berildi = 'Иә'
-          AND kaitaryldy = 'Жоқ'    
+        WHERE kaitaryldy = 'Жоқ'
     """).fetchone()["value"]
     if DATABASE_URL:
         overdue = db.execute("""
