@@ -1183,7 +1183,8 @@ def loans_auto_plan():
                 FROM kitaptar
                 ORDER BY ataui ASC
             """).fetchall()
-
+            print(f"AUTO PLAN: оқырман саны = {len(readers)}", flush=True)
+            print(f"AUTO PLAN: кітап саны = {len(books)}", flush=True)
             active = db.execute("""
                 SELECT kitap_id, COUNT(*) AS саны
                 FROM kitap_beru
