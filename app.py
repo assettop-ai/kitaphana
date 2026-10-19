@@ -900,30 +900,7 @@ def loans():
                 </table>
 
                 
-            <td>
-                {% if l['kaitaryldy'] == 'Иә' %}
-                    <span style="color:#059669; font-weight:bold;">
-                        Қайтарылды
-                    </span>
-                {% elif session.get("role") == "librarian" %}
-                    <form method="POST"
-                          action="/loans/return/{{ l['id'] }}"
-                          style="margin:0;">
-                        <button type="submit"
-                                style="background:#10b981; padding:5px 10px; font-size:12px;">
-                            Қайтару
-                        </button>
-                    </form>
-                {% else %}
-                    <span style="color:#dc2626; font-weight:bold;">
-                        Қайтарылмады
-                    </span>
-                {% endif %}
-            </td>
-
-            </tr>
-            {% endfor %}
-        </table>
+            
         <br>
         <a href="/" style="color: #2563eb; font-weight: bold; text-decoration: none;">← Басты бетке қайту</a>
     </body>
