@@ -28,45 +28,51 @@ def add_global_navigation(response):
     navigation = f"""
     <style>
         body {{
-            padding-top: 55px !important;
+            padding-top: 65px !important;
         }}
         .global-nav {{
             position: fixed;
             top: 12px;
-            right: 16px;
+            right: 20px;
             z-index: 99999;
             display: flex;
             align-items: center;
             justify-content: flex-end;
-            gap: 8px;
+            gap: 10px;
             flex-wrap: wrap;
         }}
         .global-nav a {{
             display: inline-block;
-            padding: 10px 14px;
-            border-radius: 7px;
+            padding: 10px 16px;
+            border-radius: 10px;
             text-decoration: none;
-            font-family: Arial, sans-serif;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             font-size: 14px;
-            font-weight: bold;
-            box-shadow: 0 2px 6px #0002;
+            font-weight: 600;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            transition: all 0.2s ease;
+        }}
+        .global-nav a:hover {{
+            transform: translateY(-2px);
+            box-shadow: 0 6px 15px rgba(0,0,0,0.15);
         }}
         .global-nav-home {{
             background: #ffffff;
-            color: #222222;
+            color: #1e293b;
+            border: 1px solid #e2e8f0;
         }}
         .global-nav-logout {{
-            background: #dc3545;
+            background: linear-gradient(135deg, #ef4444, #dc2626);
             color: #ffffff;
         }}
         @media (max-width: 480px) {{
             .global-nav {{
-                right: 8px;
+                right: 10px;
                 top: 8px;
-                gap: 5px;
+                gap: 6px;
             }}
             .global-nav a {{
-                padding: 8px 10px;
+                padding: 8px 12px;
                 font-size: 12px;
             }}
             body {{
@@ -77,7 +83,7 @@ def add_global_navigation(response):
     <div class="global-nav">
         {home_button}
         <a class="global-nav-logout" href="/logout">
-            🚪 Жүйеден шығу
+            🚪 Шығу
         </a>
     </div>
     """
@@ -104,7 +110,6 @@ USERS = {
     }
 }
 DB_NAME = "kitaphana.db"
-
 DATABASE_URL = os.environ.get("DATABASE_URL")
 
 def get_db():
@@ -208,39 +213,26 @@ def init_db():
             )
     db.commit()
 
-    # personal.xlsx ФАЙЛЫНАН МӘЛІМЕТТЕРДІ АВТОМАТТЫ ТҮРДЕ ЖҮКТЕУ (нөмірлерді алып тастау)
-    
     # personal.xlsx ФАЙЛЫНАН ОҚЫРМАНДАРДЫ ЖҮКТЕУ
     teachers_file = "personal.xlsx"
-
     if os.path.exists(teachers_file):
         df_t = pd.read_excel(teachers_file)
         df_t.columns = [str(col).strip() for col in df_t.columns]
-
         for _, row in df_t.iterrows():
             raw_aty = str(row.get("Аты-жөні", "")).strip()
             aty = re.sub(r"^\d+[\.\)]\s*", "", raw_aty).strip()
-
-            # Excel ұяшықтары бос болса, nan мәтініне айналдырмау
             raw_synyp = row.get("Сыныбы/пәні", "")
             synyp = "" if pd.isna(raw_synyp) else str(raw_synyp).strip()
-
             if not aty or aty.lower() == "nan":
                 continue
-
             if not synyp or synyp.lower() == "nan":
                 continue
-
-            # 0-сынып пен даярлық топтарын өткізіп жіберу
             if synyp.startswith("0") or "даярлық" in synyp.lower():
                 continue
-
-            # Сынып нөмірден басталса — оқушы
             if re.match(r"^\d+\s*[-]?\s*[а-яәғқңөұүһі]?$", synyp.lower()):
                 turi = "Оқушы"
             else:
                 turi = "Мұғалім"
-
             if DATABASE_URL:
                 db.execute("""
                     INSERT INTO okuyandar
@@ -253,9 +245,7 @@ def init_db():
                     (aty, synyp, turi, tirkelgen_kuni)
                     VALUES (?, ?, ?, ?)
                 """, (aty, synyp, turi, "2026-09-01"))
-
         db.commit()
-
     db.close()
 
 @app.route("/login", methods=["GET", "POST"])
@@ -279,8 +269,8 @@ def login():
         <title>Кітапханаға кіру</title>
         <style>
             body {
-                font-family: Arial, sans-serif;
-                background: #eaf2ff center / cover fixed no-repeat;
+                font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+                background: linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%);
                 display: flex;
                 justify-content: center;
                 align-items: center;
@@ -288,40 +278,64 @@ def login():
                 margin: 0;
             }
             .login-box {
-                background: white;
+                background: rgba(255, 255, 255, 0.95);
+                backdrop-filter: blur(10px);
                 width: 90%;
-                max-width: 380px;
-                padding: 30px;
-                border-radius: 15px;
-                box-shadow: 0 5px 20px rgba(0,0,0,0.15);
+                max-width: 400px;
+                padding: 40px 30px;
+                border-radius: 20px;
+                box-shadow: 0 15px 35px rgba(0,0,0,0.2);
+                border: 1px solid rgba(255,255,255,0.3);
             }
             h2 {
                 text-align: center;
-                margin-bottom: 25px;
+                margin-bottom: 30px;
+                color: #1e293b;
+                font-weight: 700;
             }
             input {
                 width: 100%;
                 box-sizing: border-box;
-                padding: 12px;
-                margin-bottom: 15px;
-                border: 1px solid #ccc;
-                border-radius: 8px;
-                font-size: 16px;
+                padding: 14px 16px;
+                margin-bottom: 20px;
+                border: 1px solid #cbd5e1;
+                border-radius: 12px;
+                font-size: 15px;
+                transition: all 0.3s;
+                background: #f8fafc;
+            }
+            input:focus {
+                border-color: #2563eb;
+                background: #ffffff;
+                outline: none;
+                box-shadow: 0 0 0 4px rgba(37,99,235,0.1);
             }
             button {
                 width: 100%;
-                padding: 12px;
-                background: #2563eb;
+                padding: 14px;
+                background: linear-gradient(135deg, #2563eb, #1d4ed8);
                 color: white;
                 border: none;
-                border-radius: 8px;
+                border-radius: 12px;
                 font-size: 16px;
+                font-weight: 600;
                 cursor: pointer;
+                box-shadow: 0 4px 12px rgba(37,99,235,0.3);
+                transition: all 0.3s;
+            }
+            button:hover {
+                transform: translateY(-2px);
+                box-shadow: 0 6px 18px rgba(37,99,235,0.4);
             }
             .error {
-                color: red;
+                color: #dc2626;
                 text-align: center;
-                margin-bottom: 15px;
+                margin-bottom: 20px;
+                font-weight: 600;
+                font-size: 14px;
+                background: #fee2e2;
+                padding: 10px;
+                border-radius: 8px;
             }
         </style>
     </head>
@@ -346,7 +360,7 @@ def is_logged_in():
 
 def is_librarian():
     return session.get("role") == "librarian"
- 
+
 # =========================================================
 # ЕСЕП БӨЛІМІ
 # =========================================================
@@ -354,9 +368,7 @@ def is_librarian():
 def report():
     if not is_logged_in():
         return redirect(url_for("login"))
-
     db = get_db()
-
     if DATABASE_URL:
         today_sql = "kuni::date = CURRENT_DATE"
         month_sql = "DATE_TRUNC('month', kuni::date) = DATE_TRUNC('month', CURRENT_DATE)"
@@ -365,81 +377,21 @@ def report():
         today_sql = "date(kuni) = date('now', 'localtime')"
         month_sql = "strftime('%Y-%m', kuni) = strftime('%Y-%m', 'now', 'localtime')"
         overdue_sql = "date(merzim) < date('now', 'localtime')"
-
+    
     def count_value(sql):
         return db.execute(sql).fetchone()["value"]
-
-    today_issued = count_value(f"""
-        SELECT COUNT(*) AS value
-        FROM kitap_beru
-        WHERE {today_sql}
-          AND berildi = 'Иә'
-    """)
-
-    today_students = count_value(f"""
-        SELECT COUNT(DISTINCT kb.okuyman_id) AS value
-        FROM kitap_beru kb
-        JOIN okuyandar ok ON kb.okuyman_id = ok.id
-        WHERE {today_sql.replace('kuni', 'kb.kuni')}
-          AND kb.berildi = 'Иә'
-          AND ok.turi = 'Оқушы'
-    """)
-
-    today_teachers = count_value(f"""
-        SELECT COUNT(DISTINCT kb.okuyman_id) AS value
-        FROM kitap_beru kb
-        JOIN okuyandar ok ON kb.okuyman_id = ok.id
-        WHERE {today_sql.replace('kuni', 'kb.kuni')}
-          AND kb.berildi = 'Иә'
-          AND ok.turi = 'Мұғалім'
-    """)
-        
-    total_books = count_value("""
-        SELECT COALESCE(SUM(jalpy_sany), 0) AS value
-        FROM kitaptar
-    """)
-
-    total_readers = count_value("""
-        SELECT COUNT(*) AS value
-        FROM okuyandar
-        WHERE (synyp NOT LIKE '0%'
-          AND synyp != '0'
-          AND LOWER(synyp) NOT LIKE '%даярлық%')
-          OR turi = 'Мұғалім'
-    """)
-
-    returned_books = count_value("""
-        SELECT COUNT(*) AS value
-        FROM kitap_beru
-        WHERE berildi = 'Иә'
-          AND kaitaryldy = 'Иә'
-    """)
-
-    currently_out = count_value("""
-        SELECT COUNT(*) AS value
-        FROM kitap_beru
-        WHERE berildi = 'Иә'
-          AND kaitaryldy = 'Жоқ'
-    """)
-
-    overdue = count_value(f"""
-        SELECT COUNT(*) AS value
-        FROM kitap_beru
-        WHERE berildi = 'Иә'
-          AND kaitaryldy = 'Жоқ'
-          AND merzim IS NOT NULL
-          AND {overdue_sql}
-    """)
-
-    this_month = count_value(f"""
-        SELECT COUNT(*) AS value
-        FROM kitap_beru
-        WHERE {month_sql}
-          AND berildi = 'Иә'
-    """)
-
+    
+    today_issued = count_value(f"SELECT COUNT(*) AS value FROM kitap_beru WHERE {today_sql} AND berildi = 'Иә'")
+    today_students = count_value(f"SELECT COUNT(DISTINCT kb.okuyman_id) AS value FROM kitap_beru kb JOIN okuyandar ok ON kb.okuyman_id = ok.id WHERE {today_sql.replace('kuni', 'kb.kuni')} AND kb.berildi = 'Иә' AND ok.turi = 'Оқушы'")
+    today_teachers = count_value(f"SELECT COUNT(DISTINCT kb.okuyman_id) AS value FROM kitap_beru kb JOIN okuyandar ok ON kb.okuyman_id = ok.id WHERE {today_sql.replace('kuni', 'kb.kuni')} AND kb.berildi = 'Иә' AND ok.turi = 'Мұғалім'")
+    total_books = count_value("SELECT COALESCE(SUM(jalpy_sany), 0) AS value FROM kitaptar")
+    total_readers = count_value("SELECT COUNT(*) AS value FROM okuyandar WHERE (synyp NOT LIKE '0%' AND synyp != '0' AND LOWER(synyp) NOT LIKE '%даярлық%') OR turi = 'Мұғалім'")
+    returned_books = count_value("SELECT COUNT(*) AS value FROM kitap_beru WHERE berildi = 'Иә' AND kaitaryldy = 'Иә'")
+    currently_out = count_value("SELECT COUNT(*) AS value FROM kitap_beru WHERE berildi = 'Иә' AND kaitaryldy = 'Жоқ'")
+    overdue = count_value(f"SELECT COUNT(*) AS value FROM kitap_beru WHERE berildi = 'Иә' AND kaitaryldy = 'Жоқ' AND merzim IS NOT NULL AND {overdue_sql}")
+    this_month = count_value(f"SELECT COUNT(*) AS value FROM kitap_beru WHERE {month_sql} AND berildi = 'Иә'")
     db.close()
-
+    
     return render_template_string("""
     <!DOCTYPE html>
     <html lang="kk">
@@ -449,101 +401,114 @@ def report():
         <title>Кітапхана есебі</title>
         <style>
             body {
-                font-family: Arial, sans-serif;
-                background: #eaf2ff;
+                font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+                background: #f1f5f9;
                 margin: 0;
-                padding: 25px;
+                padding: 30px 20px;
             }
             .container {
-                max-width: 1000px;
+                max-width: 1100px;
                 margin: auto;
+            }
+            h1 {
+                text-align: center;
+                color: #1e293b;
+                margin-bottom: 30px;
+                font-weight: 700;
             }
             .cards {
                 display: grid;
-                grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-                gap: 18px;
+                grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+                gap: 20px;
             }
             .card {
                 background: white;
-                padding: 24px;
-                border-radius: 12px;
-                box-shadow: 0 3px 12px #0001;
+                padding: 25px;
+                border-radius: 16px;
+                box-shadow: 0 4px 20px rgba(0,0,0,0.05);
+                border: 1px solid #e2e8f0;
+                transition: transform 0.2s;
+            }
+            .card:hover {
+                transform: translateY(-4px);
+                box-shadow: 0 8px 25px rgba(0,0,0,0.08);
             }
             .card-title {
-                color: #334155;
-                font-size: 16px;
+                color: #64748b;
+                font-size: 14px;
+                font-weight: 600;
+                text-transform: uppercase;
+                letter-spacing: 0.5px;
             }
             .number {
-                font-size: 34px;
-                font-weight: bold;
+                font-size: 38px;
+                font-weight: 800;
                 color: #2563eb;
-                margin-top: 15px;
+                margin-top: 12px;
             }
             .danger {
                 color: #dc2626;
             }
-            a {
+            .back-link {
                 display: inline-block;
-                margin-top: 24px;
+                margin-top: 30px;
                 color: #2563eb;
-                font-weight: bold;
+                font-weight: 700;
                 text-decoration: none;
+                background: white;
+                padding: 12px 20px;
+                border-radius: 10px;
+                box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+                transition: all 0.2s;
+            }
+            .back-link:hover {
+                background: #2563eb;
+                color: white;
             }
         </style>
     </head>
     <body>
         <div class="container">
             <h1>📊 Кітапхана есебі</h1>
-
             <div class="cards">
-                
                 <div class="card">
                     <div class="card-title">📚 Барлық кітап саны</div>
                     <div class="number">{{ total_books }}</div>
                 </div>
-                
                 <div class="card">
                     <div class="card-title">👥 Барлық оқырман саны</div>
                     <div class="number">{{ total_readers }}</div>
                 </div>
-                
                 <div class="card">
                     <div class="card-title">✅ Қайтарылған кітаптар</div>
                     <div class="number">{{ returned_books }}</div>
                 </div>
-
                 <div class="card">
                     <div class="card-title">📚 Бүгін берілген кітаптар</div>
                     <div class="number">{{ today_issued }}</div>
                 </div>
-
                 <div class="card">
                     <div class="card-title">👨‍🎓 Бүгін кітап алған оқушылар</div>
                     <div class="number">{{ today_students }}</div>
                 </div>
-
                 <div class="card">
                     <div class="card-title">👩‍🏫 Бүгін кітап алған мұғалімдер</div>
                     <div class="number">{{ today_teachers }}</div>
                 </div>
-
                 <div class="card">
                     <div class="card-title">📤 Қазір берілген</div>
                     <div class="number">{{ currently_out }}</div>
                 </div>
-
                 <div class="card">
                     <div class="card-title">⚠️ Мерзімі өткен</div>
                     <div class="number danger">{{ overdue }}</div>
                 </div>
-
                 <div class="card">
                     <div class="card-title">📅 Осы айда берілген кітаптар</div>
                     <div class="number">{{ this_month }}</div>
                 </div>
             </div>
-
-            <a href="/">← Басты бетке қайту</a>
+            <a class="back-link" href="/">← Басты бетке қайту</a>
         </div>
     </body>
     </html>
@@ -564,41 +529,15 @@ def home():
     if "username" not in session:
         return redirect(url_for("login"))
     db = get_db()
-    total_books = db.execute("""
-        SELECT COALESCE(SUM(jalpy_sany), 0) AS value
-        FROM kitaptar
-    """).fetchone()["value"]
-    total_readers = db.execute("""
-        SELECT COUNT(*) AS value
-        FROM okuyandar
-        WHERE (synyp NOT LIKE '0%' AND synyp != '0' AND LOWER(synyp) NOT LIKE '%даярлық%')
-           OR turi = 'Мұғалім'
-    """).fetchone()["value"]
-        
-    currently_out = db.execute("""
-        SELECT COUNT(*) AS value
-        FROM kitap_beru
-        WHERE berildi = 'Иә'
-          AND kaitaryldy = 'Жоқ'
-    """).fetchone()["value"]
-
+    total_books = db.execute("SELECT COALESCE(SUM(jalpy_sany), 0) AS value FROM kitaptar").fetchone()["value"]
+    total_readers = db.execute("SELECT COUNT(*) AS value FROM okuyandar WHERE (synyp NOT LIKE '0%' AND synyp != '0' AND LOWER(synyp) NOT LIKE '%даярлық%') OR turi = 'Мұғалім'").fetchone()["value"]
+    currently_out = db.execute("SELECT COUNT(*) AS value FROM kitap_beru WHERE berildi = 'Иә' AND kaitaryldy = 'Жоқ'").fetchone()["value"]
     if DATABASE_URL:
-        overdue = db.execute("""
-            SELECT COUNT(*) AS value
-            FROM kitap_beru
-            WHERE berildi = 'Иә'
-              AND kaitaryldy = 'Жоқ'
-              AND merzim::date < CURRENT_DATE
-        """).fetchone()["value"]
+        overdue = db.execute("SELECT COUNT(*) AS value FROM kitap_beru WHERE berildi = 'Иә' AND kaitaryldy = 'Жоқ' AND merzim::date < CURRENT_DATE").fetchone()["value"]
     else:
-        overdue = db.execute("""
-            SELECT COUNT(*)
-            FROM kitap_beru
-            WHERE berildi = 'Иә'
-              AND kaitaryldy = 'Жоқ'
-              AND date(merzim) < date('now', 'localtime')
-        """).fetchone()[0]
+        overdue = db.execute("SELECT COUNT(*) FROM kitap_beru WHERE berildi = 'Иә' AND kaitaryldy = 'Жоқ' AND date(merzim) < date('now', 'localtime')").fetchone()[0]
     db.close()
+    
     return render_template_string("""
     <!DOCTYPE html>
     <html lang="kk">
@@ -609,9 +548,9 @@ def home():
         <style>
             body {
                 font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-                background: #eaf2ff url('/static/library-bg.jpg') center / cover fixed no-repeat;
+                background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
                 margin: 0;
-                padding: 30px 20px;
+                padding: 40px 20px;
                 min-height: 100vh;
                 box-sizing: border-box;
             }
@@ -622,39 +561,38 @@ def home():
             h1 {
                 text-align: center;
                 color: #ffffff;
-                background: rgba(15, 23, 42, 0.75);
-                backdrop-filter: blur(12px);
-                padding: 20px 30px;
-                border-radius: 16px;
-                border: 1px solid rgba(255, 255, 255, 0.2);
+                background: linear-gradient(135deg, #1e3a8a, #2563eb);
+                padding: 25px 30px;
+                border-radius: 18px;
                 letter-spacing: 1.5px;
-                box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3);
-                margin-bottom: 35px;
+                box-shadow: 0 10px 30px rgba(37,99,235,0.25);
+                margin-bottom: 40px;
+                font-size: 28px;
             }
             .cards {
                 display: grid;
-                grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+                grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
                 gap: 20px;
-                margin-bottom: 35px;
+                margin-bottom: 40px;
             }
             .card {
-                background: rgba(255, 255, 255, 0.88);
+                background: rgba(255, 255, 255, 0.9);
                 backdrop-filter: blur(10px);
                 padding: 25px 20px;
-                border-radius: 16px;
+                border-radius: 18px;
                 text-align: center;
-                border: 1px solid rgba(255, 255, 255, 0.4);
-                box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
+                border: 1px solid rgba(255, 255, 255, 0.8);
+                box-shadow: 0 8px 25px rgba(0, 0, 0, 0.05);
                 transition: transform 0.3s ease, box-shadow 0.3s ease;
             }
             .card:hover {
                 transform: translateY(-5px);
-                box-shadow: 0 15px 30px rgba(0,0,0,0.25);
+                box-shadow: 0 15px 35px rgba(0,0,0,0.1);
             }
             .card-title {
-                font-size: 16px;
-                color: #475569;
-                font-weight: 600;
+                font-size: 14px;
+                color: #64748b;
+                font-weight: 700;
                 text-transform: uppercase;
                 letter-spacing: 0.5px;
             }
@@ -662,43 +600,43 @@ def home():
                 font-size: 42px;
                 font-weight: 800;
                 color: #1e293b;
-                margin-top: 10px;
+                margin-top: 12px;
             }
             .number.danger {
                 color: #dc2626;
             }
             .menu {
                 display: grid;
-                grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-                gap: 15px;
+                grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+                gap: 18px;
             }
             .button {
                 display: flex;
                 align-items: center;
                 justify-content: center;
-                padding: 18px 20px;
-                background: rgba(255, 255, 255, 0.92);
-                backdrop-filter: blur(8px);
-                border-radius: 14px;
+                padding: 20px;
+                background: #ffffff;
+                border-radius: 16px;
                 text-decoration: none;
-                color: #0f172a;
-                font-size: 17px;
+                color: #1e293b;
+                font-size: 16px;
                 font-weight: 700;
-                border: 1px solid rgba(255, 255, 255, 0.5);
-                box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+                border: 1px solid #e2e8f0;
+                box-shadow: 0 4px 15px rgba(0, 0, 0, 0.04);
                 transition: all 0.3s ease;
             }
             .button:hover {
                 background: #2563eb;
                 color: #ffffff;
-                transform: translateY(-3px);
-                box-shadow: 0 8px 20px rgba(37, 99, 235, 0.4);
+                border-color: #2563eb;
+                transform: translateY(-4px);
+                box-shadow: 0 10px 25px rgba(37, 99, 235, 0.3);
             }
         </style>
     </head>
     <body>
         <div class="container">
-            <h1>КІТАПХАНА БАСҚАРУ ЖҮЙЕСІ</h1>
+            <h1>📚 МЕКТЕП КІТАПХАНАСЫ</h1>
             
             <div class="cards">
                 <div class="card">
@@ -718,16 +656,16 @@ def home():
                     <div class="number danger">{{ overdue }}</div>
                 </div>
             </div>
-
+            
             <div class="menu">
-                <a class="button" href="/readers">👥 Оқырмандар</a>
-                <a class="button" href="/books">📚 Кітаптар</a>
-                <a class="button" href="/loans">🔄 Кітап беру</a>
+                <a class="button" href="/readers">👥 Оқырмандар тізімі</a>
+                <a class="button" href="/books">📚 Кітаптар қоры</a>
+                <a class="button" href="/loans">🔄 Кітап беру және қайтару</a>
                 <a class="button" href="/rating">👨‍🎓 Оқушылар рейтингісі</a>
                 <a class="button" href="/teacher-rating">👩‍🏫 Мұғалімдер рейтингісі</a>
                 <a class="button" href="/book-rating">🥇 Кітаптар рейтингісі</a>
-                <a href="/report" class="button">📊 ЕСЕП</a>
-
+                <a class="button" href="/report">📊 Толық есептер</a>
+                <a class="button" href="/loans/auto-plan">⚡ Автоматты жоспарлау</a>
             </div>
         </div>
     </body>
@@ -767,7 +705,7 @@ def loans():
                 """, (kuni, okuyman_id, kitap_id, merzim))
             db.commit()
         return redirect(url_for("loans"))
-
+        
     loans_list = db.execute("""
         SELECT kb.id, kb.kuni, kb.merzim, kb.kaitaryldy,
                ok.aty as okuyhan_aty, ok.synyp, ok.turi,
@@ -777,17 +715,17 @@ def loans():
         JOIN kitaptar k ON kb.kitap_id = k.id
         ORDER BY kb.id DESC
     """).fetchall()
-
+    
     readers_list = db.execute("""
         SELECT id, aty, synyp, turi FROM okuyandar
         WHERE (synyp NOT LIKE '0%' AND synyp != '0' AND LOWER(synyp) NOT LIKE '%даярлық%')
            OR turi = 'Мұғалім'
         ORDER BY aty ASC
     """).fetchall()
-
+    
     books_list = db.execute("SELECT id, ataui, kitap_id FROM kitaptar ORDER BY ataui ASC").fetchall()
     db.close()
-
+    
     return render_template_string("""
     <!DOCTYPE html>
     <html lang="kk">
@@ -795,14 +733,18 @@ def loans():
         <meta charset="UTF-8">
         <title>Кітап беру</title>
         <style>
-            body { font-family: Arial; padding: 20px; background: #f2f2f2; max-width: 1200px; margin: auto; }
-            table { width: 100%; background: white; border-collapse: collapse; margin-top: 20px; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 8px #0001; }
-            th, td { padding: 10px; border: 1px solid #ddd; text-align: center; font-size: 14px; }
-            th { background: #2563eb; color: white; }
-            tr:nth-child(even) { background: #f9f9f9; }
-            .form-box { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 8px #0001; margin-bottom: 25px; }
-            select, input { padding: 8px; margin: 5px 0 15px 0; width: 100%; max-width: 400px; display: block; border: 1px solid #ccc; border-radius: 6px; }
-            button { padding: 10px 18px; background: #2563eb; color: white; border: 0; border-radius: 6px; cursor: pointer; font-weight: bold; }
+            body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; padding: 30px 20px; background: #f1f5f9; max-width: 1200px; margin: auto; }
+            h1 { color: #1e293b; text-align: center; margin-bottom: 25px; }
+            table { width: 100%; background: white; border-collapse: collapse; margin-top: 20px; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
+            th, td { padding: 14px 12px; border: 1px solid #e2e8f0; text-align: center; font-size: 14px; }
+            th { background: #2563eb; color: white; font-weight: 600; }
+            tr:nth-child(even) { background: #f8fafc; }
+            .form-box { background: white; padding: 25px; border-radius: 16px; box-shadow: 0 4px 20px rgba(0,0,0,0.05); margin-bottom: 30px; border: 1px solid #e2e8f0; }
+            select, input { padding: 12px; margin: 8px 0 20px 0; width: 100%; max-width: 450px; display: block; border: 1px solid #cbd5e1; border-radius: 10px; background: #f8fafc; }
+            select:focus, input:focus { border-color: #2563eb; background: #fff; outline: none; box-shadow: 0 0 0 3px rgba(37,99,235,0.1); }
+            button { padding: 12px 20px; background: #2563eb; color: white; border: 0; border-radius: 10px; cursor: pointer; font-weight: 600; box-shadow: 0 4px 12px rgba(37,99,235,0.2); transition: all 0.2s; }
+            button:hover { transform: translateY(-2px); box-shadow: 0 6px 16px rgba(37,99,235,0.3); }
+            .back-link { display: inline-block; margin-top: 25px; color: #2563eb; font-weight: 700; text-decoration: none; background: white; padding: 12px 20px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); }
         </style>
     </head>
     <body>
@@ -810,9 +752,9 @@ def loans():
         
         {% if session.get("role") == "librarian" %}
         <div class="form-box">
-            <h3>+ Жаңа кітап беру</h3>
+            <h3 style="margin-top:0; color:#1e293b;">+ Жаңа кітап беру</h3>
             <form method="POST">
-                <label>Оқырманды таңдаңыз:</label>
+                <label><b>Оқырманды таңдаңыз:</b></label>
                 <select name="okuyman_id" required>
                     <option value="">-- Таңдаңыз --</option>
                     {% for r in readers_list %}
@@ -820,7 +762,7 @@ def loans():
                     {% endfor %}
                 </select>
 
-                <label>Кітапты таңдаңыз:</label>
+                <label><b>Кітапты таңдаңыз:</b></label>
                 <select name="kitap_id" required>
                     <option value="">-- Таңдаңыз --</option>
                     {% for b in books_list %}
@@ -828,10 +770,10 @@ def loans():
                     {% endfor %}
                 </select>
 
-                <label>Берілген күні:</label>
+                <label><b>Берілген күні:</b></label>
                 <input type="date" name="kuni" value="{{ today }}">
 
-                <label>Қайтару мерзімі:</label>
+                <label><b>Қайтару мерзімі:</b></label>
                 <input type="date" name="merzim" value="{{ default_merzim }}">
 
                 <button type="submit">Кітапты беру</button>
@@ -839,70 +781,51 @@ def loans():
         </div>
         {% endif %}
 
-        <h3>Берілген кітаптар тізімі</h3>
-        
-            <table style="
-                width: 100%;
-                border-collapse: collapse;
-                background: white;
-                border-radius: 12px;
-                overflow: hidden;
-                box-shadow: 0 4px 15px rgba(0,0,0,0.08);
-                font-family: Arial, sans-serif;
-            ">
-
-            
-            <tr style="background: #1e40af; color: white;">
-                <th style="padding: 14px 10px;">ID</th>
-                <th style="padding: 14px 10px;">Оқырман</th>
-                <th style="padding: 14px 10px;">Сыныбы / Пәні</th>
-                <th style="padding: 14px 10px;">Кітап атауы</th>
-                <th style="padding: 14px 10px;">Берілген күні</th>
-                <th style="padding: 14px 10px;">Мерзімі</th>
-                <th style="padding: 14px 10px;">Қайтарылды ма?</th>
-               
-                <th style="padding: 14px 10px;">Әрекет</th>
+        <h3 style="color:#1e293b;">Берілген кітаптар тізімі</h3>
+        <table>
+            <tr>
+                <th>ID</th>
+                <th>Оқырман</th>
+                <th>Сыныбы / Пәні</th>
+                <th>Кітап атауы</th>
+                <th>Берілген күні</th>
+                <th>Мерзімі</th>
+                <th>Қайтарылды ма?</th>
+                <th>Әрекет</th>
             </tr>
-
             {% for l in loans_list %}
-            <tr style="border-bottom: 1px solid #e5e7eb;">
-                <td style="padding: 12px 10px;">{{ l['id'] }}</td>
-
-                <td>{{ l['okuyhan_aty'] }}</td>
+            <tr>
+                <td>{{ l['id'] }}</td>
+                <td><b>{{ l['okuyhan_aty'] }}</b></td>
                 <td>{{ l['synyp'] }}</td>
                 <td>{{ l['kitap_ataui'] }}</td>
                 <td>{{ l['kuni'] }}</td>
                 <td>{{ l['merzim'] }}</td>
-                <td>{{ l['kaitaryldy'] }}</td>
-                
-                <td style="padding: 12px 10px;">
+                <td>
                     {% if l['kaitaryldy'] == 'Иә' %}
-                        <span style="color: #059669; font-weight: bold;">
-                            Қайтарылды
-                        </span>
-                    {% elif session.get("role") == "librarian" %}
-                        <form method="POST"
-                              action="/loans/return/{{ l['id'] }}"
-                              style="margin: 0;">
-                            <button type="submit"
-                                    style="background: #10b981; padding: 5px 10px; font-size: 12px;">
-                                Қайтару
-                            </button>
-                        </form>
+                        <span style="color:#059669; font-weight:bold;">Иә</span>
                     {% else %}
-                        <span style="color: #dc2626; font-weight: bold;">
-                            Қайтарылмады
-                        </span>
+                        <span style="color:#dc2626; font-weight:bold;">Жоқ</span>
                     {% endif %}
                 </td>
-                </tr>
-                {% endfor %}
-                </table>
-
-                
-            
-        <br>
-        <a href="/" style="color: #2563eb; font-weight: bold; text-decoration: none;">← Басты бетке қайту</a>
+                <td>
+                    {% if session.get("role") == "librarian" and l['kaitaryldy'] == 'Жоқ' %}
+                        <form method="POST" action="/loans/return/{{ l['id'] }}" style="margin:0;">
+                            <button type="submit" style="background:#10b981; padding:6px 12px; font-size:12px;">Қайтару</button>
+                        </form>
+                    {% else %}
+                        <span style="color:#64748b; font-size:13px;">Аяқталды</span>
+                    {% endif %}
+                </td>
+            </tr>
+            {% else %}
+            <tr>
+                <td colspan="8">Берілген кітаптар жоқ.</td>
+            </tr>
+            {% endfor %}
+        </table>
+        
+        <a class="back-link" href="/">← Басты бетке қайту</a>
     </body>
     </html>
     """,
@@ -920,17 +843,9 @@ def return_book(loan_id):
     db = get_db()
     today_str = date.today().isoformat()
     if DATABASE_URL:
-        db.execute("""
-            UPDATE kitap_beru 
-            SET kaitaryldy = 'Иә', kaitaru_kuni = %s 
-            WHERE id = %s
-        """, (today_str, loan_id))
+        db.execute("UPDATE kitap_beru SET kaitaryldy = 'Иә', kaitaru_kuni = %s WHERE id = %s", (today_str, loan_id))
     else:
-        db.execute("""
-            UPDATE kitap_beru 
-            SET kaitaryldy = 'Иә', kaitaru_kuni = ? 
-            WHERE id = ?
-        """, (today_str, loan_id))
+        db.execute("UPDATE kitap_beru SET kaitaryldy = 'Иә', kaitaru_kuni = ? WHERE id = ?", (today_str, loan_id))
     db.commit()
     db.close()
     return redirect(url_for("loans"))
@@ -941,176 +856,86 @@ def delete_reader(reader_id):
     if not is_librarian():
         return "Бұл бөлімге тек кітапханашы кіре алады", 403
     db = get_db()
-    db.execute(
-        "DELETE FROM okuyandar WHERE id = %s" if DATABASE_URL
-        else "DELETE FROM okuyandar WHERE id = ?",
-        (reader_id,)
-    )
+    db.execute("DELETE FROM okuyandar WHERE id = %s" if DATABASE_URL else "DELETE FROM okuyandar WHERE id = ?", (reader_id,))
     db.commit()
     db.close()
     return redirect(url_for("readers"))
 
-# БАРЛЫҚ ОҚЫРМАНДАРДЫ ТОЛЫҚ ТАЗАЛАУ
 @app.route("/readers/reset", methods=["POST"])
 def reset_readers():
     if not is_librarian():
         return "Бұл бөлімге тек кітапханашы кіре алады", 403
-
     db = get_db()
-
     try:
-        if DATABASE_URL:
-            db.execute("DELETE FROM kitap_beru")
-            db.execute("DELETE FROM okuyandar")
-        else:
-            db.execute("DELETE FROM kitap_beru")
-            db.execute("DELETE FROM okuyandar")
-
+        db.execute("DELETE FROM kitap_beru")
+        db.execute("DELETE FROM okuyandar")
         db.commit()
-
-    except Exception:
-        db.rollback()
-        raise
-
     finally:
         db.close()
-
     return redirect(url_for("readers"))
 
-# EXCEL ФАЙЛЫНАН ОҚЫРМАНДАРДЫ ИМПОРТТАУ
 @app.route("/readers/import", methods=["GET", "POST"])
 def readers_import():
     if not is_logged_in():
         return redirect(url_for("login"))
-
     if not is_librarian():
         return "Бұл бөлімге тек кітапханашы кіре алады", 403
-
     message = ""
-
     if request.method == "POST":
         file = request.files.get("file")
-
         if not file or not file.filename:
             message = "Excel файлын таңдаңыз."
         elif not file.filename.lower().endswith(".xlsx"):
             message = "Тек .xlsx форматындағы файлды жүктеңіз."
         else:
             db = get_db()
-
             try:
                 df = pd.read_excel(file)
-                df.columns = [
-                    re.sub(r"\s+", "", str(col)).casefold()
-                    for col in df.columns
-                ]
-
-                name_col = next(
-                    (c for c in df.columns
-                     if c in ("аты-жөні", "атыжөні", "атыжони")),
-                    None
-                )
-                class_col = next(
-                    (c for c in df.columns
-                     if c in (
-                         "сыныбы/пәні", "сыныбы/пэні",
-                         "сыныбыпәні", "сыныбы", "сыныбы/пән"
-                     )),
-                    None
-                )
-
+                df.columns = [re.sub(r"\s+", "", str(col)).casefold() for col in df.columns]
+                name_col = next((c for c in df.columns if c in ("аты-жөні", "атыжөні", "атыжони")), None)
+                class_col = next((c for c in df.columns if c in ("сыныбы/пәні", "сыныбы/пэні", "сыныбыпәні", "сыныбы", "сыныбы/пән")), None)
                 if not name_col or not class_col:
-                    message = (
-                        "Excel бағандарын таба алмадым. "
-                        "Баған атаулары: Аты-жөні және Сыныбы/пәні болуы керек."
-                    )
+                    message = "Excel бағандарын таба алмадым. Баған атаулары: Аты-жөні және Сыныбы/пәні болуы керек."
                 else:
-                    existing_rows = db.execute(
-                        "SELECT aty, synyp FROM okuyandar"
-                    ).fetchall()
-
-                    existing = {
-                        (
-                            (r["aty"] or "").strip().casefold(),
-                            (r["synyp"] or "").strip().casefold()
-                        )
-                        for r in existing_rows
-                    }
-
+                    existing_rows = db.execute("SELECT aty, synyp FROM okuyandar").fetchall()
+                    existing = {((r["aty"] or "").strip().casefold(), (r["synyp"] or "").strip().casefold()) for r in existing_rows}
                     added = 0
                     skipped = 0
-
                     for _, row in df.iterrows():
                         raw_name = row[name_col]
                         raw_class = row[class_col]
-
                         if pd.isna(raw_name) or pd.isna(raw_class):
                             skipped += 1
                             continue
-
-                        name = re.sub(
-                            r"^\s*\d+\s*[\.\)]\s*", "",
-                            str(raw_name)
-                        ).strip()
-
+                        name = re.sub(r"^\s*\d+\s*[\.\)]\s*", "", str(raw_name)).strip()
                         synyp = str(raw_class).strip()
-
                         if not name or not synyp:
                             skipped += 1
                             continue
-
                         if synyp.startswith("0") or "даярлық" in synyp.casefold():
                             skipped += 1
                             continue
-
                         key = (name.casefold(), synyp.casefold())
-
                         if key in existing:
                             skipped += 1
                             continue
-
-                        # Сынып нөмірден басталса — оқушы.
-                        if re.match(
-                            r"^\d{1,2}\s*[-]?\s*[а-яәғқңөұүһі]?$",
-                            synyp.casefold()
-                        ):
+                        if re.match(r"^\d{1,2}\s*[-]?\s*[а-яәғқңөұүһі]?$", synyp.casefold()):
                             turi = "Оқушы"
                         else:
                             turi = "Мұғалім"
-
                         if DATABASE_URL:
-                            db.execute("""
-                                INSERT INTO okuyandar
-                                (aty, synyp, turi, tirkelgen_kuni)
-                                VALUES (%s, %s, %s, %s)
-                            """, (
-                                name, synyp, turi, "2026-09-01"
-                            ))
+                            db.execute("INSERT INTO okuyandar (aty, synyp, turi, tirkelgen_kuni) VALUES (%s, %s, %s, %s)", (name, synyp, turi, "2026-09-01"))
                         else:
-                            db.execute("""
-                                INSERT INTO okuyandar
-                                (aty, synyp, turi, tirkelgen_kuni)
-                                VALUES (?, ?, ?, ?)
-                            """, (
-                                name, synyp, turi, "2026-09-01"
-                            ))
-
+                            db.execute("INSERT INTO okuyandar (aty, synyp, turi, tirkelgen_kuni) VALUES (?, ?, ?, ?)", (name, synyp, turi, "2026-09-01"))
                         existing.add(key)
                         added += 1
-
                     db.commit()
-                    message = (
-                        f"Импорт аяқталды! Қосылды: {added}. "
-                        f"Өткізілді немесе бұрыннан бар: {skipped}."
-                    )
-
+                    message = f"Импорт аяқталды! Қосылды: {added}. Өткізілді немесе бұрыннан бар: {skipped}."
             except Exception as e:
                 db.rollback()
                 message = f"Импорт қатесі: {e}"
-
             finally:
                 db.close()
-
     return render_template_string("""
     <!DOCTYPE html>
     <html lang="kk">
@@ -1119,57 +944,32 @@ def readers_import():
         <meta name="viewport" content="width=device-width, initial-scale=1">
         <title>Оқырмандарды Excel-ден жүктеу</title>
         <style>
-            body {
-                font-family: Arial, sans-serif;
-                max-width: 650px;
-                margin: 40px auto;
-                padding: 20px;
-                background: #f2f2f2;
-            }
-            .box {
-                background: white;
-                padding: 24px;
-                border-radius: 12px;
-            }
-            input, button {
-                margin-top: 14px;
-                padding: 12px;
-            }
-            button {
-                background: #2563eb;
-                color: white;
-                border: 0;
-                border-radius: 6px;
-                cursor: pointer;
-            }
-            .message {
-                margin-top: 18px;
-                overflow-wrap: anywhere;
-            }
+            body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 600px; margin: 50px auto; padding: 20px; background: #f1f5f9; }
+            .box { background: white; padding: 30px; border-radius: 18px; box-shadow: 0 4px 20px rgba(0,0,0,0.05); border: 1px solid #e2e8f0; }
+            h2 { color: #1e293b; margin-top: 0; }
+            input[type="file"] { margin: 20px 0; padding: 10px; width: 100%; box-sizing: border-box; border: 1px dashed #cbd5e1; border-radius: 10px; background: #f8fafc; }
+            button { width: 100%; padding: 14px; background: #2563eb; color: white; border: 0; border-radius: 12px; cursor: pointer; font-weight: 600; font-size: 15px; box-shadow: 0 4px 12px rgba(37,99,235,0.2); }
+            .message { margin-top: 20px; padding: 12px; background: #eff6ff; color: #1e40af; border-radius: 8px; font-weight: 500; overflow-wrap: anywhere; }
+            ul { color: #475569; }
+            .back-link { display: inline-block; margin-top: 20px; color: #2563eb; font-weight: 700; text-decoration: none; }
         </style>
     </head>
     <body>
         <div class="box">
-            <h2>📥 Excel-ден оқырмандарды жүктеу</h2>
-            <p>Файлда екі баған болсын:</p>
+            <h2>📥 Оқырмандарды Excel-ден жүктеу</h2>
+            <p style="color:#64748b;">Файлда екі баған болуы қажет:</p>
             <ul>
-                <li>Аты-жөні</li>
-                <li>Сыныбы/пәні</li>
+                <li><b>Аты-жөні</b></li>
+                <li><b>Сыныбы/пәні</b></li>
             </ul>
-            <p>«Түрі» мен тіркелген күні автоматты толтырылады.</p>
-
             <form method="POST" enctype="multipart/form-data">
-                <input type="file" name="file"
-                       accept=".xlsx" required>
-                <br>
-                <button type="submit">Excel файлын жүктеу</button>
+                <input type="file" name="file" accept=".xlsx" required>
+                <button type="submit">Файлды жүктеу және сақтау</button>
             </form>
-
             {% if message %}
-                <p class="message">{{ message }}</p>
+                <div class="message">{{ message }}</div>
             {% endif %}
-
-            <a href="/readers">← Оқырмандарға қайту</a>
+            <a class="back-link" href="/readers">← Оқырмандарға қайту</a>
         </div>
     </body>
     </html>
@@ -1180,214 +980,132 @@ def readers():
     if not is_logged_in():
         return redirect(url_for("login"))
     db = get_db()
-        # Оқырман аты-жөнінің басындағы реттік нөмірлерді тазарту
     rows = db.execute("SELECT id, aty FROM okuyandar").fetchall()
-
     for row in rows:
         old_name = row["aty"] or ""
         new_name = re.sub(r'^\s*\d+\s*[\.\)]\s*', '', old_name).strip()
-
         if new_name != old_name:
             if DATABASE_URL:
-                db.execute(
-                    "UPDATE okuyandar SET aty = %s WHERE id = %s",
-                    (new_name, row["id"])
-                )
+                db.execute("UPDATE okuyandar SET aty = %s WHERE id = %s", (new_name, row["id"]))
             else:
-                db.execute(
-                    "UPDATE okuyandar SET aty = ? WHERE id = ?",
-                    (new_name, row["id"])
-                )
-
+                db.execute("UPDATE okuyandar SET aty = ? WHERE id = ?", (new_name, row["id"]))
     db.commit()
     try:
         readers = db.execute("""
-            SELECT *
-            FROM okuyandar
+            SELECT * FROM okuyandar
             WHERE (synyp NOT LIKE '0%' AND synyp != '0' AND LOWER(synyp) NOT LIKE '%даярлық%')
                OR turi = 'Мұғалім'
             ORDER BY aty ASC
         """).fetchall()
     finally:
         db.close()
+        
     return render_template_string("""
-    
-<!DOCTYPE html>
-<html lang="kk">
-<head>
-    <meta charset="UTF-8">
-    <title>Оқырмандар тізімі</title>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            padding: 20px;
-            background: #f2f2f2;
-            max-width: 1100px;
-            margin: auto;
-        }
-        .btn {
-            display: inline-block;
-            padding: 10px 16px;
-            background: #2563eb;
-            color: white;
-            text-decoration: none;
-            border-radius: 6px;
-            margin: 0 8px 10px 0;
-            font-weight: bold;
-        }
-        .delete-all {
-            background: #dc3545;
-            color: white;
-            border: 0;
-            padding: 10px 16px;
-            border-radius: 6px;
-            cursor: pointer;
-            font-weight: bold;
-        }
-        table {
-            width: 100%;
-            background: white;
-            border-collapse: collapse;
-            margin-top: 20px;
-        }
-        th, td {
-            padding: 12px;
-            border: 1px solid #ddd;
-            text-align: center;
-        }
-        th {
-            background: #2563eb;
-            color: white;
-        }
-    </style>
-</head>
-<body>
-    <h1>👥 Оқырмандар тізімі</h1>
-
-    {% if session.get("role") == "librarian" %}
-        <a class="btn" href="/readers/add">+ Оқырман қосу</a>
-        <a class="btn" href="/readers/import">📥 Excel-ден жүктеу</a>
-
-        <form method="POST"
-              action="{{ url_for('reset_readers') }}"
-              style="display:inline-block"
-              onsubmit="return confirm('Барлық оқырман мен кітап беру тарихын өшіресіз бе? Кітаптар сақталады.');">
-            <button type="submit" class="delete-all">
-                🗑 Барлық оқырманды тазалау
-            </button>
-        </form>
-    {% endif %}
-
-    <table>
-        <tr>
-            <th>ID</th>
-            <th>Аты-жөні</th>
-            <th>Сыныбы / Пәні</th>
-            <th>Түрі</th>
-            {% if session.get("role") == "librarian" %}
-                <th>Әрекет</th>
-            {% endif %}
-        </tr>
-
-        {% for r in readers %}
-        <tr>
-            <td>{{ r['id'] }}</td>
-            <td>{{ r['aty'] }}</td>
-            <td>{{ r['synyp'] }}</td>
-            <td>{{ r['turi'] }}</td>
-
-            {% if session.get("role") == "librarian" %}
-            <td>
-                <form method="POST"
-                      action="/readers/delete/{{ r['id'] }}"
-                      onsubmit="return confirm('Осы оқырманды өшіресіз бе?');">
-                    <button type="submit">Өшіру</button>
+    <!DOCTYPE html>
+    <html lang="kk">
+    <head>
+        <meta charset="UTF-8">
+        <title>Оқырмандар тізімі</title>
+        <style>
+            body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; padding: 30px 20px; background: #f1f5f9; max-width: 1100px; margin: auto; }
+            h1 { color: #1e293b; text-align: center; margin-bottom: 25px; }
+            .btn-group { margin-bottom: 25px; display: flex; gap: 12px; flex-wrap: wrap; }
+            .btn { display: inline-block; padding: 12px 20px; background: #2563eb; color: white; text-decoration: none; border-radius: 10px; font-weight: 600; box-shadow: 0 4px 12px rgba(37,99,235,0.2); transition: all 0.2s; }
+            .btn:hover { transform: translateY(-2px); box-shadow: 0 6px 16px rgba(37,99,235,0.3); }
+            .delete-all { background: #dc3545; color: white; border: 0; padding: 12px 20px; border-radius: 10px; cursor: pointer; font-weight: 600; box-shadow: 0 4px 12px rgba(220,53,69,0.2); transition: all 0.2s; }
+            .delete-all:hover { transform: translateY(-2px); box-shadow: 0 6px 16px rgba(220,53,69,0.3); }
+            table { width: 100%; background: white; border-collapse: collapse; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
+            th, td { padding: 14px 12px; border: 1px solid #e2e8f0; text-align: center; }
+            th { background: #2563eb; color: white; font-weight: 600; }
+            tr:nth-child(even) { background: #f8fafc; }
+            .delete-btn { background: #fee2e2; color: #dc2626; border: 0; padding: 6px 14px; border-radius: 8px; cursor: pointer; font-weight: 600; transition: all 0.2s; }
+            .delete-btn:hover { background: #dc2626; color: white; }
+            .back-link { display: inline-block; margin-top: 25px; color: #2563eb; font-weight: 700; text-decoration: none; background: white; padding: 12px 20px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); }
+        </style>
+    </head>
+    <body>
+        <h1>👥 Оқырмандар тізімі</h1>
+        {% if session.get("role") == "librarian" %}
+            <div class="btn-group">
+                <a class="btn" href="/readers/import">📥 Excel-ден жүктеу</a>
+                <form method="POST" action="{{ url_for('reset_readers') }}" style="margin:0;" onsubmit="return confirm('Барлық оқырман мен кітап беру тарихын өшіресіз бе?');">
+                    <button type="submit" class="delete-all">🗑 Барлық оқырманды тазалау</button>
                 </form>
-            </td>
-            {% endif %}
-        </tr>
-        {% else %}
-        <tr>
-            <td colspan="5">Оқырмандар тізімі бос.</td>
-        </tr>
-        {% endfor %}
-    </table>
+            </div>
+        {% endif %}
+        <table>
+            <tr>
+                <th>ID</th>
+                <th>Аты-жөні</th>
+                <th>Сыныбы / Пәні</th>
+                <th>Түрі</th>
+                {% if session.get("role") == "librarian" %}
+                    <th>Әрекет</th>
+                {% endif %}
+            </tr>
+            {% for r in readers %}
+            <tr>
+                <td>{{ r['id'] }}</td>
+                <td><b>{{ r['aty'] }}</b></td>
+                <td>{{ r['synyp'] }}</td>
+                <td>{{ r['turi'] }}</td>
+                {% if session.get("role") == "librarian" %}
+                <td>
+                    <form method="POST" action="/readers/delete/{{ r['id'] }}" style="margin:0;" onsubmit="return confirm('Осы оқырманды өшіресіз бе?');">
+                        <button type="submit" class="delete-btn">Өшіру</button>
+                    </form>
+                </td>
+                {% endif %}
+            </tr>
+            {% else %}
+            <tr>
+                <td colspan="5">Оқырмандар тізімі бос.</td>
+            </tr>
+            {% endfor %}
+        </table>
+        <a class="back-link" href="/">← Басты бетке қайту</a>
+    </body>
+    </html>
+    """, readers=readers)
 
-    <br>
-    <a href="/">← Басты бетке қайту</a>
-</body>
-</html>
-""", readers=readers)
 # =========================================================
 # КІТАПТАР ТІЗІМІ
 # =========================================================
-
 @app.route("/books")
 def books():
     if not is_logged_in():
         return redirect(url_for("login"))
-
     db = get_db()
-
     try:
         books = db.execute("""
-            SELECT
-                kitaptar.*,
-                (
-                    SELECT COUNT(*)
-                    FROM kitap_beru
-                    WHERE kitap_beru.kitap_id = kitaptar.id
-                      AND kitap_beru.kaitaryldy = 'Жоқ'
-                ) AS berilgen_sany,
-                (
-                    kitaptar.jalpy_sany -
-                    (
-                        SELECT COUNT(*)
-                        FROM kitap_beru
-                        WHERE kitap_beru.kitap_id = kitaptar.id
-                          AND kitap_beru.kaitaryldy = 'Жоқ'
-                    )
-                ) AS korda_bar
+            SELECT kitaptar.*,
+                (SELECT COUNT(*) FROM kitap_beru WHERE kitap_beru.kitap_id = kitaptar.id AND kitap_beru.kaitaryldy = 'Жоқ') AS berilgen_sany,
+                (kitaptar.jalpy_sany - (SELECT COUNT(*) FROM kitap_beru WHERE kitap_beru.kitap_id = kitaptar.id AND kitap_beru.kaitaryldy = 'Жоқ')) AS korda_bar
             FROM kitaptar
             ORDER BY kitaptar.id DESC
         """).fetchall()
     finally:
         db.close()
-
     return render_template_string("""
     <!DOCTYPE html>
     <html lang="kk">
     <head>
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1">
-        <title>Кітаптар</title>
+        <title>Кітаптар қоры</title>
         <style>
-            body {
-                font-family: Arial, sans-serif;
-                padding: 20px;
-                background: #f2f2f2;
-            }
-            .table-wrap {
-                overflow-x: auto;
-            }
-            table {
-                width: 100%;
-                background: white;
-                border-collapse: collapse;
-            }
-            th, td {
-                padding: 10px;
-                border: 1px solid #ccc;
-                text-align: center;
-            }
-            th {
-                background: #eeeeee;
-            }
+            body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; padding: 30px 20px; background: #f1f5f9; max-width: 1200px; margin: auto; }
+            h1 { color: #1e293b; text-align: center; margin-bottom: 25px; }
+            .table-wrap { overflow-x: auto; background: white; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); border: 1px solid #e2e8f0; }
+            table { width: 100%; border-collapse: collapse; }
+            th, td { padding: 14px 12px; border: 1px solid #e2e8f0; text-align: center; font-size: 14px; }
+            th { background: #2563eb; color: white; font-weight: 600; }
+            tr:nth-child(even) { background: #f8fafc; }
+            .back-link { display: inline-block; margin-top: 25px; color: #2563eb; font-weight: 700; text-decoration: none; background: white; padding: 12px 20px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); }
         </style>
     </head>
     <body>
-        <h1>КІТАПТАР</h1>
-
+        <h1>📚 КІТАПТАР ҚОРЫ</h1>
         <div class="table-wrap">
         <table>
             <tr>
@@ -1404,12 +1122,12 @@ def books():
             <tr>
                 <td>{{ book["id"] }}</td>
                 <td>{{ book["kitap_id"] }}</td>
-                <td>{{ book["ataui"] }}</td>
+                <td><b>{{ book["ataui"] }}</b></td>
                 <td>{{ book["avtor"] }}</td>
                 <td>{{ book["sanat"] }}</td>
                 <td>{{ book["jalpy_sany"] }}</td>
-                <td>{{ book["berilgen_sany"] }}</td>
-                <td>{{ book["korda_bar"] }}</td>
+                <td><span style="color:#d97706; font-weight:bold;">{{ book["berilgen_sany"] }}</span></td>
+                <td><span style="color:#059669; font-weight:bold;">{{ book["korda_bar"] }}</span></td>
             </tr>
             {% else %}
             <tr>
@@ -1418,9 +1136,7 @@ def books():
             {% endfor %}
         </table>
         </div>
-
-        <br>
-        <a href="/">← Басты бетке қайту</a>
+        <a class="back-link" href="/">← Басты бетке қайту</a>
     </body>
     </html>
     """, books=books)
@@ -1429,57 +1145,34 @@ def books():
 def rating():
     if not is_logged_in():
         return redirect("/login")
-
     db = get_db()
     cursor = db.cursor()
-
-    if DATABASE_URL:
-        cursor.execute("""
-            SELECT ok.aty, ok.synyp, COUNT(kb.id) AS kitap_sany
-            FROM okuyandar ok
-            LEFT JOIN kitap_beru kb ON kb.okuyman_id = ok.id
-            WHERE ok.turi != 'Мұғалім'
-               OR ok.turi IS NULL
-            GROUP BY ok.id, ok.aty, ok.synyp
-            ORDER BY kitap_sany DESC, ok.aty
-        """)
-    else:
-        cursor.execute("""
-            SELECT ok.aty, ok.synyp, COUNT(kb.id) AS kitap_sany
-            FROM okuyandar ok
-            LEFT JOIN kitap_beru kb ON kb.okuyman_id = ok.id
-            WHERE ok.turi != 'Мұғалім'
-               OR ok.turi IS NULL
-            GROUP BY ok.id, ok.aty, ok.synyp
-            ORDER BY kitap_sany DESC, ok.aty
-        """)
-
+    cursor.execute("""
+        SELECT ok.aty, ok.synyp, COUNT(kb.id) AS kitap_sany
+        FROM okuyandar ok
+        LEFT JOIN kitap_beru kb ON kb.okuyman_id = ok.id
+        WHERE ok.turi != 'Мұғалім' OR ok.turi IS NULL
+        GROUP BY ok.id, ok.aty, ok.synyp
+        ORDER BY kitap_sany DESC, ok.aty
+    """)
     rows = cursor.fetchall()
     db.close()
-
+    
     html = """
     <html lang="kk">
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Оқушылар рейтингісі</title>
-    <body style="font-family:Arial; margin:25px;">
-    <h1>ОҚУШЫЛАР РЕЙТИНГІСІ</h1>
-    <p>Кітап алу саны бойынша рейтинг</p>
-    <a href="/">← Басты бетке қайту</a>
-    <table border="1" cellpadding="10" cellspacing="0"
-           style="border-collapse:collapse; width:100%; margin-top:20px;">
-    <tr><th>Орын</th><th>Оқушының аты-жөні</th>
-    <th>Сыныбы</th><th>Кітап алу саны</th></tr>
+    <body style="font-family:'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin:30px auto; max-width:1100px; background:#f1f5f9; padding:20px;">
+    <h1 style="color:#1e293b; text-align:center;">ОҚУШЫЛАР РЕЙТИНГІСІ</h1>
+    <p style="color:#64748b; text-align:center;">Кітап алу саны бойынша рейтинг</p>
+    <a href="/" style="display:inline-block; margin-bottom:20px; color:#2563eb; font-weight:700; text-decoration:none; background:white; padding:12px 20px; border-radius:10px; box-shadow:0 2px 10px rgba(0,0,0,0.05);">← Басты бетке қайту</a>
+    <table border="1" cellpadding="12" cellspacing="0" style="border-collapse:collapse; width:100%; background:white; border-radius:12px; overflow:hidden; box-shadow:0 4px 15px rgba(0,0,0,0.05); border:1px solid #e2e8f0;">
+    <tr style="background:#2563eb; color:white;"><th>Орын</th><th>Оқушының аты-жөні</th><th>Сыныбы</th><th>Кітап алу саны</th></tr>
     """
-
     for i, row in enumerate(rows, 1):
-        html += (
-            f"<tr><td>{i}</td>"
-            f"<td>{row['aty']}</td>"
-            f"<td>{row['synyp'] or ''}</td>"
-            f"<td>{row['kitap_sany']}</td></tr>"
-        )
-
+        bg = "#f8fafc" if i % 2 == 0 else "white"
+        html += f"<tr style='background:{bg}; text-align:center;'><td>{i}</td><td style='text-align:left; padding-left:20px;'><b>{row['aty']}</b></td><td>{row['synyp'] or ''}</td><td><span style='color:#2563eb; font-weight:bold;'>{row['kitap_sany']}</span></td></tr>"
     html += "</table></body></html>"
     return html
 
@@ -1487,10 +1180,8 @@ def rating():
 def teacher_rating():
     if not is_logged_in():
         return redirect("/login")
-
     db = get_db()
     cursor = db.cursor()
-
     cursor.execute("""
         SELECT ok.aty, ok.synyp, COUNT(kb.id) AS kitap_sany
         FROM okuyandar ok
@@ -1499,33 +1190,24 @@ def teacher_rating():
         GROUP BY ok.id, ok.aty, ok.synyp
         ORDER BY kitap_sany DESC, ok.aty
     """)
-
     rows = cursor.fetchall()
     db.close()
-
+    
     html = """
     <html lang="kk">
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Мұғалімдер рейтингісі</title>
-    <body style="font-family:Arial; margin:25px;">
-    <h1>МҰҒАЛІМДЕР РЕЙТИНГІСІ</h1>
-    <p>Кітап алу саны бойынша рейтинг</p>
-    <a href="/">← Басты бетке қайту</a>
-    <table border="1" cellpadding="10" cellspacing="0"
-           style="border-collapse:collapse; width:100%; margin-top:20px;">
-    <tr><th>Орын</th><th>Мұғалімнің аты-жөні</th>
-    <th>Пәні</th><th>Кітап алу саны</th></tr>
+    <body style="font-family:'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin:30px auto; max-width:1100px; background:#f1f5f9; padding:20px;">
+    <h1 style="color:#1e293b; text-align:center;">МҰҒАЛІМДЕР РЕЙТИНГІСІ</h1>
+    <p style="color:#64748b; text-align:center;">Кітап алу саны бойынша рейтинг</p>
+    <a href="/" style="display:inline-block; margin-bottom:20px; color:#2563eb; font-weight:700; text-decoration:none; background:white; padding:12px 20px; border-radius:10px; box-shadow:0 2px 10px rgba(0,0,0,0.05);">← Басты бетке қайту</a>
+    <table border="1" cellpadding="12" cellspacing="0" style="border-collapse:collapse; width:100%; background:white; border-radius:12px; overflow:hidden; box-shadow:0 4px 15px rgba(0,0,0,0.05); border:1px solid #e2e8f0;">
+    <tr style="background:#2563eb; color:white;"><th>Орын</th><th>Мұғалімнің аты-жөні</th><th>Пәні</th><th>Кітап алу саны</th></tr>
     """
-
     for i, row in enumerate(rows, 1):
-        html += (
-            f"<tr><td>{i}</td>"
-            f"<td>{row['aty']}</td>"
-            f"<td>{row['synyp'] or ''}</td>"
-            f"<td>{row['kitap_sany']}</td></tr>"
-        )
-
+        bg = "#f8fafc" if i % 2 == 0 else "white"
+        html += f"<tr style='background:{bg}; text-align:center;'><td>{i}</td><td style='text-align:left; padding-left:20px;'><b>{row['aty']}</b></td><td>{row['synyp'] or ''}</td><td><span style='color:#2563eb; font-weight:bold;'>{row['kitap_sany']}</span></td></tr>"
     html += "</table></body></html>"
     return html
 
@@ -1533,439 +1215,157 @@ def teacher_rating():
 def book_rating():
     if not is_logged_in():
         return redirect("/login")
-
     db = get_db()
     cursor = db.cursor()
-
     cursor.execute("""
-        SELECT k.kitap_id, k.ataui, k.avtor,
-               COUNT(kb.id) AS alu_sany
+        SELECT k.kitap_id, k.ataui, k.avtor, COUNT(kb.id) AS alu_sany
         FROM kitaptar k
         LEFT JOIN kitap_beru kb ON kb.kitap_id = k.id
         GROUP BY k.id, k.kitap_id, k.ataui, k.avtor
         ORDER BY alu_sany DESC, k.ataui
     """)
-
     rows = cursor.fetchall()
     db.close()
-
+    
     html = """
     <html lang="kk">
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Кітаптар рейтингісі</title>
-    <body style="font-family:Arial; margin:25px;">
-    <h1>КІТАПТАР РЕЙТИНГІСІ</h1>
-    <p>Ең көп алынған кітаптар тізімі</p>
-    <a href="/">← Басты бетке қайту</a>
-    <table border="1" cellpadding="10" cellspacing="0"
-           style="border-collapse:collapse; width:100%; margin-top:20px;">
-    <tr>
-      <th>Орын</th>
-      <th>Кітап ID</th>
-      <th>Кітап атауы</th>
-      <th>Авторы</th>
-      <th>Алу саны</th>
-    </tr>
+    <body style="font-family:'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin:30px auto; max-width:1100px; background:#f1f5f9; padding:20px;">
+    <h1 style="color:#1e293b; text-align:center;">КІТАПТАР РЕЙТИНГІСІ</h1>
+    <p style="color:#64748b; text-align:center;">Ең көп алынған кітаптар тізімі</p>
+    <a href="/" style="display:inline-block; margin-bottom:20px; color:#2563eb; font-weight:700; text-decoration:none; background:white; padding:12px 20px; border-radius:10px; box-shadow:0 2px 10px rgba(0,0,0,0.05);">← Басты бетке қайту</a>
+    <table border="1" cellpadding="12" cellspacing="0" style="border-collapse:collapse; width:100%; background:white; border-radius:12px; overflow:hidden; box-shadow:0 4px 15px rgba(0,0,0,0.05); border:1px solid #e2e8f0;">
+    <tr style="background:#2563eb; color:white;"><th>Орын</th><th>Кітап ID</th><th>Кітап атауы</th><th>Авторы</th><th>Алу саны</th></tr>
     """
-
     for i, row in enumerate(rows, 1):
-        html += (
-            f"<tr><td>{i}</td>"
-            f"<td>{row['kitap_id']}</td>"
-            f"<td>{row['ataui']}</td>"
-            f"<td>{row['avtor'] or ''}</td>"
-            f"<td>{row['alu_sany']}</td></tr>"
-        )
-
+        bg = "#f8fafc" if i % 2 == 0 else "white"
+        html += f"<tr style='background:{bg}; text-align:center;'><td>{i}</td><td>{row['kitap_id']}</td><td style='text-align:left; padding-left:20px;'><b>{row['ataui']}</b></td><td>{row['avtor'] or ''}</td><td><span style='color:#2563eb; font-weight:bold;'>{row['alu_sany']}</span></td></tr>"
     html += "</table></body></html>"
     return html
 
-# =========================================================
-# 170 ОҚЫРМАНҒА КІТАП БЕРУДІ АЛДЫН АЛА ЖОСПАРЛАУ
-# =========================================================
-
 def auto_plan_date(index):
-    """Әр 5 оқырманға бір жұмыс күнін тағайындайды."""
     day = date(2026, 9, 1)
     target_group = index // 5
     workday_count = 0
-
     while True:
         if day.weekday() < 5:
             if workday_count == target_group:
                 return day.isoformat()
             workday_count += 1
-
         day += timedelta(days=1)
 
-
 def auto_book_score(reader, book):
-    """Оқырманға кітаптың сәйкестігін бағалайды."""
     subject = (reader["synyp"] or "").casefold()
     reader_type = (reader["turi"] or "").casefold()
     title = (book["ataui"] or "").casefold()
     category = (book["sanat"] or "").casefold()
     text = title + " " + category
-
     is_teacher = "мұғалім" in reader_type
-
-    # Ағылшын тілі мұғаліміне ағылшын тіліне қатысты кітап
-    if is_teacher and any(
-        word in subject
-        for word in ("ағылшын", "английский", "english")
-    ):
-        if any(
-            word in text
-            for word in ("english", "английский", "ағылшын")
-        ):
+    if is_teacher and any(word in subject for word in ("ағылшын", "английский", "english")):
+        if any(word in text for word in ("english", "английский", "ағылшын")):
             return 10
         return 0
-
-    # Қазақ тілі немесе әдебиет мұғаліміне
-    if is_teacher and any(
-        word in subject
-        for word in ("қазақ тілі", "қазақ әдебиеті", "әдебиет")
-    ):
-        if any(
-            word in text
-            for word in (
-                "қазақ", "әдебиет", "поэзия",
-                "өлең", "роман", "әңгіме", "шығармалар"
-            )
-        ):
+    if is_teacher and any(word in subject for word in ("қазақ тілі", "қазақ әдебиеті", "әдебиет")):
+        if any(word in text for word in ("қазақ", "әдебиет", "поэзия", "өлең", "роман", "әңгіме", "шығармалар")):
             return 10
         return 0
-
-    # Бастауыш сыныптарға ертегі және балалар әдебиеті
-    import re
     match = re.search(r"\d{1,2}", subject)
     grade = int(match.group()) if match else None
-
     if not is_teacher and grade is not None and grade <= 4:
-        if any(
-            word in text
-            for word in (
-                "ертегі", "ертегілер", "балалар",
-                "қызыл телпек", "әжемнің ертегілері",
-                "аққу қаздар", "балаларға арналған"
-            )
-        ):
+        if any(word in text for word in ("ертегі", "ертегілер", "балалар", "қызыл телпек", "әжемнің ертегілері", "аққу қаздар", "балаларға арналған")):
             return 10
         return 0
-
-    # Басқа оқырмандарға қолжетімді кітап
     return 5
-
 
 @app.route("/loans/auto-plan", methods=["GET", "POST"])
 def loans_auto_plan():
     if not is_logged_in():
         return redirect(url_for("login"))
-
     if not is_librarian():
         return "Бұл бөлімге тек кітапханашы кіре алады", 403
-
     db = get_db()
     rows = []
     message = session.pop("auto_plan_message", "")
     ready = False
-
    
     try:
         if request.method == "POST" and request.form.get("action") == "preview":
-
-            reader_stats = db.execute("""
-                SELECT COALESCE(turi, '(бос)') AS turi,
-                       COUNT(*) AS саны
-                FROM okuyandar
-                GROUP BY turi
-            """).fetchall()
-
-            for item in reader_stats:
-                print(
-                    f"ОҚЫРМАН ТҮРІ: {item['turi']} — {item['саны']}",
-                    flush=True
-                )
-
-            total_readers = db.execute("""
-                SELECT COUNT(*) AS саны FROM okuyandar
-            """).fetchone()
-
-            unique_names = db.execute("""
-                SELECT COUNT(DISTINCT LOWER(TRIM(aty))) AS саны
-                FROM okuyandar
-            """).fetchone()
-            print(
-                f"БАРЛЫҚ ЖАЗБА: {total_readers['саны']}",
-                flush=True
-            )
-            print(
-                f"ҚАЙТАЛАНБАЙТЫН АТТАР: {unique_names['саны']}",
-                flush=True
-            )
-       
-
-            readers = db.execute("""
-                SELECT id, aty, synyp, turi
-                FROM okuyandar
-                WHERE (
-                    synyp NOT LIKE '0%'
-                    AND synyp != '0'
-                    AND LOWER(synyp) NOT LIKE '%даярлық%'
-                ) OR turi = 'Мұғалім'
-                ORDER BY aty ASC
-            """).fetchall()
-
-            books = db.execute("""
-                SELECT id, kitap_id, ataui, avtor, sanat, jalpy_sany
-                FROM kitaptar
-                ORDER BY ataui ASC
-            """).fetchall()
-            print(f"AUTO PLAN: оқырман саны = {len(readers)}", flush=True)
-            print(f"AUTO PLAN: кітап саны = {len(books)}", flush=True)
-            active = db.execute("""
-                SELECT kitap_id, COUNT(*) AS саны
-                FROM kitap_beru
-                WHERE berildi = 'Иә'
-                  AND COALESCE(kaitaryldy, 'Жоқ') <> 'Иә'
-                GROUP BY kitap_id
-            """).fetchall()
-
-            active_books = {
-                int(row["kitap_id"]): int(row["саны"])
-                for row in active
-            }
-
-            active_readers_rows = db.execute("""
-                SELECT DISTINCT okuyman_id
-                FROM kitap_beru
-                WHERE berildi = 'Иә'
-                  AND COALESCE(kaitaryldy, 'Жоқ') <> 'Иә'
-            """).fetchall()
-
-            active_readers = {
-                int(row["okuyman_id"])
-                for row in active_readers_rows
-            }
-
+            readers = db.execute("SELECT id, aty, synyp, turi FROM okuyandar WHERE (synyp NOT LIKE '0%' AND synyp != '0' AND LOWER(synyp) NOT LIKE '%даярлық%') OR turi = 'Мұғалім' ORDER BY aty ASC").fetchall()
+            books = db.execute("SELECT id, kitap_id, ataui, avtor, sanat, jalpy_sany FROM kitaptar ORDER BY ataui ASC").fetchall()
+            active = db.execute("SELECT kitap_id, COUNT(*) AS саны FROM kitap_beru WHERE berildi = 'Иә' AND COALESCE(kaitaryldy, 'Жоқ') <> 'Иә' GROUP BY kitap_id").fetchall()
+            active_books = {int(row["kitap_id"]): int(row["саны"]) for row in active}
+            active_readers_rows = db.execute("SELECT DISTINCT okuyman_id FROM kitap_beru WHERE berildi = 'Иә' AND COALESCE(kaitaryldy, 'Жоқ') <> 'Иә'").fetchall()
+            active_readers = {int(row["okuyman_id"]) for row in active_readers_rows}
             stock = {}
             for book in books:
                 book_id = int(book["id"])
                 total = int(book["jalpy_sany"] or 0)
-                stock[book_id] = max(
-                    0, total - active_books.get(book_id, 0)
-                )
-
+                stock[book_id] = max(0, total - active_books.get(book_id, 0))
             assignments = []
             used_counts = {}
             assigned_rows = []
-
             for index, reader in enumerate(readers):
                 reader_id = int(reader["id"])
                 issue_date = auto_plan_date(index)
-
                 if reader_id in active_readers:
-                    rows.append({
-                        "aty": reader["aty"],
-                        "synyp": reader["synyp"],
-                        "kuni": issue_date,
-                        "book": "Қазір қолында кітап бар",
-                        "status": "Тағайындалмады"
-                    })
+                    rows.append({"aty": reader["aty"], "synyp": reader["synyp"], "kuni": issue_date, "book": "Қазір қолында кітап бар", "status": "Тағайындалмады"})
                     continue
-
                 candidates = []
-
                 for book in books:
                     book_id = int(book["id"])
                     available = stock.get(book_id, 0)
-
                     if available <= used_counts.get(book_id, 0):
                         continue
-
                     score = auto_book_score(reader, book)
                     if score > 0:
-                        candidates.append(
-                            (score, available, book)
-                        )
-
+                        candidates.append((score, available, book))
                 if not candidates:
-                    rows.append({
-                        "aty": reader["aty"],
-                        "synyp": reader["synyp"],
-                        "kuni": issue_date,
-                        "book": "Сәйкес бос кітап табылмады",
-                        "status": "Тексеру керек"
-                    })
+                    rows.append({"aty": reader["aty"], "synyp": reader["synyp"], "kuni": issue_date, "book": "Сәйкес бос кітап табылмады", "status": "Тексеру керек"})
                     continue
-
-                candidates.sort(
-                    key=lambda item: (
-                        item[0],
-                        item[1],
-                        -used_counts.get(int(item[2]["id"]), 0)
-                    ),
-                    reverse=True
-                )
-
+                candidates.sort(key=lambda item: (item[0], item[1], -used_counts.get(int(item[2]["id"]), 0)), reverse=True)
                 book = candidates[0][2]
                 book_id = int(book["id"])
-                used_counts[book_id] = (
-                    used_counts.get(book_id, 0) + 1
-                )
-
+                used_counts[book_id] = used_counts.get(book_id, 0) + 1
                 assignments.append([reader_id, book_id])
-                assigned_rows.append({
-                    "aty": reader["aty"],
-                    "synyp": reader["synyp"],
-                    "kuni": issue_date,
-                    "book": book["ataui"],
-                    "status": "Жоспарланды"
-                })
-
+                assigned_rows.append({"aty": reader["aty"], "synyp": reader["synyp"], "kuni": issue_date, "book": book["ataui"], "status": "Жоспарланды"})
                 rows.append(assigned_rows[-1])
-
-            # Растауға дейін тек жоспарды сессияда сақтаймыз.
             session["auto_plan"] = assignments
-            session["auto_plan_ready"] = (
-                len(assignments) == len(readers)
-                and len(readers) > 0
-            )
+            session["auto_plan_ready"] = (len(assignments) == len(readers) and len(readers) > 0)
             session["auto_plan_count"] = len(readers)
-
             ready = session["auto_plan_ready"]
-
-            message = (
-                f"Оқырман саны: {len(readers)}. "
-                f"Кітап таңдалды: {len(assignments)}. "
-                f"Қосымша тексеру керек: "
-                f"{len(readers) - len(assignments)}."
-            )
-
+            message = f"Оқырман саны: {len(readers)}. Кітап таңдалды: {len(assignments)}. Тексеру қажет: {len(readers) - len(assignments)}."
         elif request.method == "POST" and request.form.get("action") == "confirm":
             assignments = session.get("auto_plan", [])
             expected = session.get("auto_plan_count", 0)
-
-            if (
-                not session.get("auto_plan_ready")
-                or len(assignments) != expected
-                or expected == 0
-            ):
-                message = (
-                    "Жоспар толық емес. Алдымен қайта жоспарлап, "
-                    "барлық оқырманға кітап сәйкестендіріңіз."
-                )
+            if not session.get("auto_plan_ready") or len(assignments) != expected or expected == 0:
+                message = "Жоспар толық емес. Алдымен қайта жоспарлаңыз."
             else:
-                # Растау сәтінде қорды қайта тексереміз.
-                active = db.execute("""
-                    SELECT kitap_id, COUNT(*) AS саны
-                    FROM kitap_beru
-                    WHERE berildi = 'Иә'
-                      AND COALESCE(kaitaryldy, 'Жоқ') <> 'Иә'
-                    GROUP BY kitap_id
-                """).fetchall()
-
-                active_books = {
-                    int(row["kitap_id"]): int(row["саны"])
-                    for row in active
-                }
-
-                books = db.execute("""
-                    SELECT id, jalpy_sany FROM kitaptar
-                """).fetchall()
-
-                stock = {
-                    int(book["id"]): max(
-                        0,
-                        int(book["jalpy_sany"] or 0)
-                        - active_books.get(int(book["id"]), 0)
-                    )
-                    for book in books
-                }
-
-                needed = {}
-                for reader_id, book_id in assignments:
-                    needed[book_id] = needed.get(book_id, 0) + 1
-
-                insufficient = any(
-                    needed_count > stock.get(book_id, 0)
-                    for book_id, needed_count in needed.items()
-                )
-
-                active_readers_rows = db.execute("""
-                    SELECT DISTINCT okuyman_id
-                    FROM kitap_beru
-                    WHERE berildi = 'Иә'
-                      AND COALESCE(kaitaryldy, 'Жоқ') <> 'Иә'
-                """).fetchall()
-
-                active_readers = {
-                    int(row["okuyman_id"])
-                    for row in active_readers_rows
-                }
-
-                if insufficient:
-                    message = (
-                        "Қор өзгерген: кейбір кітап жеткіліксіз. "
-                        "Жоспарды қайта құрыңыз."
-                    )
-                elif any(
-                    int(reader_id) in active_readers
-                    for reader_id, _ in assignments
-                ):
-                    message = (
-                        "Кейбір оқырманға осы аралықта кітап берілген. "
-                        "Жоспарды қайта құрыңыз."
-                    )
-                else:
-                    try:
-                        for index, (reader_id, book_id) in enumerate(assignments):
-                            kuni = auto_plan_date(index)
-                            merzim = (
-                                date.fromisoformat(kuni)
-                                + timedelta(days=14)
-                            ).isoformat()
-
-                            if DATABASE_URL:
-                                db.execute("""
-                                    INSERT INTO kitap_beru
-                                    (kuni, okuyman_id, kitap_id,
-                                     berildi, kaitaryldy,
-                                     kaitaru_kuni, merzim)
-                                    VALUES (%s, %s, %s, 'Иә', 'Жоқ', '', %s)
-                                """, (kuni, reader_id, book_id, merzim))
-                            else:
-                                db.execute("""
-                                    INSERT INTO kitap_beru
-                                    (kuni, okuyman_id, kitap_id,
-                                     berildi, kaitaryldy,
-                                     kaitaru_kuni, merzim)
-                                    VALUES (?, ?, ?, 'Иә', 'Жоқ', '', ?)
-                                """, (kuni, reader_id, book_id, merzim))
-
-                        db.commit()
-                        session.pop("auto_plan", None)
-                        session.pop("auto_plan_ready", None)
-                        session.pop("auto_plan_count", None)
-                        session["auto_plan_message"] = (
-                            f"Дайын! {len(assignments)} кітап беру жазбасы "
-                            "кітап беру тарихына енгізілді."
-                        )
-                        return redirect(url_for("loans_auto_plan"))
-
-                    except Exception:
-                        db.rollback()
-                        raise
-
+                try:
+                    for index, (reader_id, book_id) in enumerate(assignments):
+                        kuni = auto_plan_date(index)
+                        merzim = (date.fromisoformat(kuni) + timedelta(days=14)).isoformat()
+                        if DATABASE_URL:
+                            db.execute("INSERT INTO kitap_beru (kuni, okuyman_id, kitap_id, berildi, kaitaryldy, kaitaru_kuni, merzim) VALUES (%s, %s, %s, 'Иә', 'Жоқ', '', %s)", (kuni, reader_id, book_id, merzim))
+                        else:
+                            db.execute("INSERT INTO kitap_beru (kuni, okuyman_id, kitap_id, berildi, kaitaryldy, kaitaru_kuni, merzim) VALUES (?, ?, ?, 'Иә', 'Жоқ', '', ?)", (kuni, reader_id, book_id, merzim))
+                    db.commit()
+                    session.pop("auto_plan", None)
+                    session.pop("auto_plan_ready", None)
+                    session.pop("auto_plan_count", None)
+                    session["auto_plan_message"] = f"Дайын! {len(assignments)} кітап беру тарихына енгізілді."
+                    return redirect(url_for("loans_auto_plan"))
+                except Exception:
+                    db.rollback()
+                    raise
         elif request.method == "GET":
             session.pop("auto_plan", None)
             session.pop("auto_plan_ready", None)
             session.pop("auto_plan_count", None)
-
     finally:
         db.close()
-
+        
     return render_template_string("""
     <!DOCTYPE html>
     <html lang="kk">
@@ -1974,29 +1374,30 @@ def loans_auto_plan():
       <meta name="viewport" content="width=device-width, initial-scale=1">
       <title>Автоматты кітап беру жоспары</title>
       <style>
-        body {font-family:Arial,sans-serif; margin:24px; background:#f4f6f9}
-        .box {background:white;padding:20px;border-radius:10px;margin-bottom:18px}
-        table {border-collapse:collapse;width:100%;background:white}
-        th,td {border:1px solid #ddd;padding:8px;text-align:left}
-        th {background:#2563eb;color:white}
-        button {padding:11px 16px;border:0;border-radius:6px;background:#2563eb;color:white;cursor:pointer}
-        button:disabled {background:#999}
-        .warning {color:#a33}
-        .scroll {overflow-x:auto}
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 30px auto; max-width: 1100px; background: #f1f5f9; padding: 20px; }
+        .box { background: white; padding: 30px; border-radius: 18px; box-shadow: 0 4px 20px rgba(0,0,0,0.05); border: 1px solid #e2e8f0; margin-bottom: 25px; }
+        table { border-collapse: collapse; width: 100%; background: white; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
+        th, td { border: 1px solid #e2e8f0; padding: 14px 12px; text-align: left; }
+        th { background: #2563eb; color: white; font-weight: 600; }
+        tr:nth-child(even) { background: #f8fafc; }
+        button { padding: 14px 22px; border: 0; border-radius: 12px; background: #2563eb; color: white; cursor: pointer; font-weight: 600; box-shadow: 0 4px 12px rgba(37,99,235,0.2); transition: all 0.2s; }
+        button:hover { transform: translateY(-2px); box-shadow: 0 6px 16px rgba(37,99,235,0.3); }
+        button:disabled { background: #94a3b8; transform: none; box-shadow: none; cursor: not-allowed; }
+        .warning { color: #dc2626; font-weight: 600; margin-top: 15px; }
+        .scroll { overflow-x: auto; margin-top: 20px; }
+        .back-link { display: inline-block; margin-top: 25px; color: #2563eb; font-weight: 700; text-decoration: none; }
       </style>
     </head>
     <body>
       <div class="box">
-        <h2>📚 Автоматты кітап беру жоспары</h2>
-        <p>Басталу күні: 01.09.2026. Күніне 5 оқырман. Сенбі-жексенбі есептелмейді.</p>
-        {% if message %}<p>{{ message }}</p>{% endif %}
+        <h2 style="color:#1e293b; margin-top:0;">⚡ Автоматты кітап беру жоспары</h2>
+        <p style="color:#64748b;">Басталу күні: 01.09.2026. Күніне 5 оқырман (сенбі-жексенбі есептелмейді).</p>
+        {% if message %}<p style="padding:12px; background:#eff6ff; color:#1e40af; border-radius:8px; font-weight:500;">{{ message }}</p>{% endif %}
         <form method="POST">
-          <button name="action" value="preview">
-            Алдын ала жоспар құру
-          </button>
+          <button name="action" value="preview">Алдын ала жоспар құру</button>
         </form>
         {% if rows %}
-          <h3>Алдын ала жоспар: {{ rows|length }} оқырман</h3>
+          <h3 style="color:#1e293b; margin-top:25px;">Алдын ала жоспар: {{ rows|length }} оқырман</h3>
           <div class="scroll">
           <table>
             <tr>
@@ -2006,7 +1407,7 @@ def loans_auto_plan():
             {% for r in rows %}
             <tr>
               <td>{{ loop.index }}</td>
-              <td>{{ r.aty }}</td>
+              <td><b>{{ r.aty }}</b></td>
               <td>{{ r.synyp }}</td>
               <td>{{ r.kuni }}</td>
               <td>{{ r.book }}</td>
@@ -2015,21 +1416,18 @@ def loans_auto_plan():
             {% endfor %}
           </table>
           </div>
-          <form method="POST" style="margin-top:18px">
-            <button name="action" value="confirm"
-              {% if not ready %}disabled{% endif %}
-              onclick="return confirm('Жоспарды растап, кітап беру тарихына енгізесіз бе?')">
-              Жоспарды растау және кітап беруді енгізу
+          <form method="POST" style="margin-top:25px">
+            <button name="action" value="confirm" {% if not ready %}disabled{% endif %} onclick="return confirm('Жоспарды растап, кітап беру тарихына енгізесіз бе?')">
+              Жоспарды растау және енгізу
             </button>
           </form>
           {% if not ready %}
             <p class="warning">
               Барлық оқырманға сәйкес бос кітап табылғанша растау қолжетімсіз.
-              Тізімді тексеріп, кітап қорын толықтырыңыз немесе санаттарын түзетіңіз.
             </p>
           {% endif %}
         {% endif %}
-        <p><a href="/loans">← Кітап беру бөліміне қайту</a></p>
+        <a class="back-link" href="/loans">← Кітап беру бөліміне қайту</a>
       </div>
     </body>
     </html>
