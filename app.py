@@ -793,9 +793,24 @@ def readers():
                 <th>ID</th>
                 <th>Аты-жөні</th>
                 <th>Сыныбы / Пәні</th>
-                {% if session.get("role") == "librarian" %}
-                    <th>Әрекет</th>
-                {% endif %}
+                
+{% if session.get("role") == "librarian" %}
+    <a class="btn" href="/readers/add">+ Оқырман қосу</a>
+
+    <a class="btn" href="/readers/import">📥 Excel-ден жүктеу</a>
+
+    <form method="POST"
+          action="{{ url_for('reset_readers') }}"
+          style="display:inline-block; margin-top:10px;"
+          onsubmit="return confirm('НАЗАР АУДАР! Барлық оқырмандар мен кітап беру тарихы өшіріледі. Кітаптар сақталады. Жалғастырасыз ба?');">
+
+        <button type="submit"
+                style="background:#dc3545; color:white; border:0; padding:10px 16px; border-radius:6px; cursor:pointer; font-weight:bold;">
+            🗑 Барлық оқырманды тазалау
+        </button>
+    </form>
+{% endif %}
+
             </tr>
             {% for r in readers %}
             <tr>
