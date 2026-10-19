@@ -346,7 +346,179 @@ def is_logged_in():
 
 def is_librarian():
     return session.get("role") == "librarian"
-   
+ 
+# =========================================================
+# ЕСЕП БӨЛІМІ
+# =========================================================
+@app.route("/report")
+def report():
+    if not is_logged_in():
+        return redirect(url_for("login"))
+
+    db = get_db()
+
+    if DATABASE_URL:
+        today_sql = "kuni::date = CURRENT_DATE"
+        month_sql = "DATE_TRUNC('month', kuni::date) = DATE_TRUNC('month', CURRENT_DATE)"
+        overdue_sql = "merzim::date < CURRENT_DATE"
+    else:
+        today_sql = "date(kuni) = date('now', 'localtime')"
+        month_sql = "strftime('%Y-%m', kuni) = strftime('%Y-%m', 'now', 'localtime')"
+        overdue_sql = "date(merzim) < date('now', 'localtime')"
+
+    def count_value(sql):
+        return db.execute(sql).fetchone()["value"]
+
+    today_issued = count_value(f"""
+        SELECT COUNT(*) AS value
+        FROM kitap_beru
+        WHERE {today_sql}
+          AND berildi = 'Иә'
+    """)
+
+    today_students = count_value(f"""
+        SELECT COUNT(DISTINCT kb.okuyman_id) AS value
+        FROM kitap_beru kb
+        JOIN okuyandar ok ON kb.okuyman_id = ok.id
+        WHERE {today_sql.replace('kuni', 'kb.kuni')}
+          AND kb.berildi = 'Иә'
+          AND ok.turi = 'Оқушы'
+    """)
+
+    today_teachers = count_value(f"""
+        SELECT COUNT(DISTINCT kb.okuyman_id) AS value
+        FROM kitap_beru kb
+        JOIN okuyandar ok ON kb.okuyman_id = ok.id
+        WHERE {today_sql.replace('kuni', 'kb.kuni')}
+          AND kb.berildi = 'Иә'
+          AND ok.turi = 'Мұғалім'
+    """)
+
+    currently_out = count_value("""
+        SELECT COUNT(*) AS value
+        FROM kitap_beru
+        WHERE berildi = 'Иә'
+          AND kaitaryldy = 'Жоқ'
+    """)
+
+    overdue = count_value(f"""
+        SELECT COUNT(*) AS value
+        FROM kitap_beru
+        WHERE berildi = 'Иә'
+          AND kaitaryldy = 'Жоқ'
+          AND merzim IS NOT NULL
+          AND {overdue_sql}
+    """)
+
+    this_month = count_value(f"""
+        SELECT COUNT(*) AS value
+        FROM kitap_beru
+        WHERE {month_sql}
+          AND berildi = 'Иә'
+    """)
+
+    db.close()
+
+    return render_template_string("""
+    <!DOCTYPE html>
+    <html lang="kk">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <title>Кітапхана есебі</title>
+        <style>
+            body {
+                font-family: Arial, sans-serif;
+                background: #eaf2ff;
+                margin: 0;
+                padding: 25px;
+            }
+            .container {
+                max-width: 1000px;
+                margin: auto;
+            }
+            .cards {
+                display: grid;
+                grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+                gap: 18px;
+            }
+            .card {
+                background: white;
+                padding: 24px;
+                border-radius: 12px;
+                box-shadow: 0 3px 12px #0001;
+            }
+            .card-title {
+                color: #334155;
+                font-size: 16px;
+            }
+            .number {
+                font-size: 34px;
+                font-weight: bold;
+                color: #2563eb;
+                margin-top: 15px;
+            }
+            .danger {
+                color: #dc2626;
+            }
+            a {
+                display: inline-block;
+                margin-top: 24px;
+                color: #2563eb;
+                font-weight: bold;
+                text-decoration: none;
+            }
+        </style>
+    </head>
+    <body>
+        <div class="container">
+            <h1>📊 Кітапхана есебі</h1>
+
+            <div class="cards">
+                <div class="card">
+                    <div class="card-title">📚 Бүгін берілген кітаптар</div>
+                    <div class="number">{{ today_issued }}</div>
+                </div>
+
+                <div class="card">
+                    <div class="card-title">👨‍🎓 Бүгін кітап алған оқушылар</div>
+                    <div class="number">{{ today_students }}</div>
+                </div>
+
+                <div class="card">
+                    <div class="card-title">👩‍🏫 Бүгін кітап алған мұғалімдер</div>
+                    <div class="number">{{ today_teachers }}</div>
+                </div>
+
+                <div class="card">
+                    <div class="card-title">📤 Қазір берілген</div>
+                    <div class="number">{{ currently_out }}</div>
+                </div>
+
+                <div class="card">
+                    <div class="card-title">⚠️ Мерзімі өткен</div>
+                    <div class="number danger">{{ overdue }}</div>
+                </div>
+
+                <div class="card">
+                    <div class="card-title">📅 Осы айда берілген кітаптар</div>
+                    <div class="number">{{ this_month }}</div>
+                </div>
+            </div>
+
+            <a href="/">← Басты бетке қайту</a>
+        </div>
+    </body>
+    </html>
+    """,
+    today_issued=today_issued,
+    today_students=today_students,
+    today_teachers=today_teachers,
+    currently_out=currently_out,
+    overdue=overdue,
+    this_month=this_month
+    )
+  
 @app.route("/")
 def home():
     if "username" not in session:
