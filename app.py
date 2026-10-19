@@ -1165,8 +1165,41 @@ def loans_auto_plan():
     message = session.pop("auto_plan_message", "")
     ready = False
 
+   
     try:
         if request.method == "POST" and request.form.get("action") == "preview":
+
+            reader_stats = db.execute("""
+                SELECT COALESCE(turi, '(бос)') AS turi,
+                       COUNT(*) AS саны
+                FROM okuyandar
+                GROUP BY turi
+            """).fetchall()
+
+            for item in reader_stats:
+                print(
+                    f"ОҚЫРМАН ТҮРІ: {item['turi']} — {item['саны']}",
+                    flush=True
+                )
+
+            total_readers = db.execute("""
+                SELECT COUNT(*) AS саны FROM okuyandar
+            """).fetchone()
+
+            unique_names = db.execute("""
+                SELECT COUNT(DISTINCT LOWER(TRIM(aty))) AS саны
+                FROM okuyandar
+            """).fetchone()
+            print(
+                f"БАРЛЫҚ ЖАЗБА: {total_readers['саны']}",
+                flush=True
+            )
+            print(
+                f"ҚАЙТАЛАНБАЙТЫН АТТАР: {unique_names['саны']}",
+                flush=True
+            )
+       
+
             readers = db.execute("""
                 SELECT id, aty, synyp, turi
                 FROM okuyandar
