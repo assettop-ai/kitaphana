@@ -209,46 +209,51 @@ def init_db():
     db.commit()
 
     # personal.xlsx ФАЙЛЫНАН МӘЛІМЕТТЕРДІ АВТОМАТТЫ ТҮРДЕ ЖҮКТЕУ (нөмірлерді алып тастау)
+    
+    # personal.xlsx ФАЙЛЫНАН ОҚЫРМАНДАРДЫ ЖҮКТЕУ
     teachers_file = "personal.xlsx"
+
     if os.path.exists(teachers_file):
-        db.execute("DELETE FROM okuyandar")
-        db.commit()
-
         df_t = pd.read_excel(teachers_file)
+        df_t.columns = [str(col).strip() for col in df_t.columns]
+
         for _, row in df_t.iterrows():
-            raw_aty = str(row.get('Аты-жөні') or '').strip()
-            # Басындағы реттік нөмірді (мысалы, "151. " немесе "151) ") тазарту
-            aty = re.sub(r'^\d+[\.\)]\s*', '', raw_aty).strip()
-            synyp = str(row.get('Сыныбы/пәні') or '').strip()
-            
-            if not aty or aty.lower() == 'nan':
+            raw_aty = str(row.get("Аты-жөні", "")).strip()
+            aty = re.sub(r"^\d+[\.\)]\s*", "", raw_aty).strip()
+
+            # Excel ұяшықтары бос болса, nan мәтініне айналдырмау
+            raw_synyp = row.get("Сыныбы/пәні", "")
+            synyp = "" if pd.isna(raw_synyp) else str(raw_synyp).strip()
+
+            if not aty or aty.lower() == "nan":
                 continue
 
-            # 0-сынып немесе даярлық топтарын өткізіп жіберу
-            if synyp.startswith('0') or synyp == '0' or 'даярлық' in synyp.lower():
+            if not synyp or synyp.lower() == "nan":
                 continue
 
-            # Мұғалім немесе оқушы екенін анықтау
-            is_teacher = False
-            if any(char.isalpha() for char in synyp) and not re.match(r'^\d+[\s\-]*[а-яәғқңөұүһі]*$', synyp.lower()):
-                is_teacher = True
-            
-            if is_teacher:
-                turi = "Мұғалім"
-                synyp = "/мұғалім"
-            else:
+            # 0-сынып пен даярлық топтарын өткізіп жіберу
+            if synyp.startswith("0") or "даярлық" in synyp.lower():
+                continue
+
+            # Сынып нөмірден басталса — оқушы
+            if re.match(r"^\d+\s*[-]?\s*[а-яәғқңөұүһі]?$", synyp.lower()):
                 turi = "Оқушы"
+            else:
+                turi = "Мұғалім"
 
             if DATABASE_URL:
                 db.execute("""
-                    INSERT INTO okuyandar (aty, synyp, turi, tirkelgen_kuni)
+                    INSERT INTO okuyandar
+                    (aty, synyp, turi, tirkelgen_kuni)
                     VALUES (%s, %s, %s, %s)
-                """, (aty, synyp, turi, '2026-09-01'))
+                """, (aty, synyp, turi, "2026-09-01"))
             else:
                 db.execute("""
-                    INSERT INTO okuyandar (aty, synyp, turi, tirkelgen_kuni)
+                    INSERT INTO okuyandar
+                    (aty, synyp, turi, tirkelgen_kuni)
                     VALUES (?, ?, ?, ?)
-                """, (aty, synyp, turi, '2026-09-01'))
+                """, (aty, synyp, turi, "2026-09-01"))
+
         db.commit()
 
     db.close()
@@ -699,6 +704,33 @@ def delete_reader(reader_id):
     )
     db.commit()
     db.close()
+    return redirect(url_for("readers"))
+
+# БАРЛЫҚ ОҚЫРМАНДАРДЫ ТОЛЫҚ ТАЗАЛАУ
+@app.route("/readers/reset", methods=["POST"])
+def reset_readers():
+    if not is_librarian():
+        return "Бұл бөлімге тек кітапханашы кіре алады", 403
+
+    db = get_db()
+
+    try:
+        if DATABASE_URL:
+            db.execute("DELETE FROM kitap_beru")
+            db.execute("DELETE FROM okuyandar")
+        else:
+            db.execute("DELETE FROM kitap_beru")
+            db.execute("DELETE FROM okuyandar")
+
+        db.commit()
+
+    except Exception:
+        db.rollback()
+        raise
+
+    finally:
+        db.close()
+
     return redirect(url_for("readers"))
 
 @app.route("/readers")
