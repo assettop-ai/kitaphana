@@ -1285,6 +1285,58 @@ def teacher_rating():
     html += "</table></body></html>"
     return html
 
+@app.route("/book-rating")
+def book_rating():
+    if not is_logged_in():
+        return redirect("/login")
+
+    db = get_db()
+    cursor = db.cursor()
+
+    cursor.execute("""
+        SELECT k.kitap_id, k.ataui, k.avtor,
+               COUNT(kb.id) AS alu_sany
+        FROM kitaptar k
+        LEFT JOIN kitap_beru kb ON kb.kitap_id = k.id
+        GROUP BY k.id, k.kitap_id, k.ataui, k.avtor
+        ORDER BY alu_sany DESC, k.ataui
+    """)
+
+    rows = cursor.fetchall()
+    db.close()
+
+    html = """
+    <html lang="kk">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Кітаптар рейтингісі</title>
+    <body style="font-family:Arial; margin:25px;">
+    <h1>КІТАПТАР РЕЙТИНГІСІ</h1>
+    <p>Ең көп алынған кітаптар тізімі</p>
+    <a href="/">← Басты бетке қайту</a>
+    <table border="1" cellpadding="10" cellspacing="0"
+           style="border-collapse:collapse; width:100%; margin-top:20px;">
+    <tr>
+      <th>Орын</th>
+      <th>Кітап ID</th>
+      <th>Кітап атауы</th>
+      <th>Авторы</th>
+      <th>Алу саны</th>
+    </tr>
+    """
+
+    for i, row in enumerate(rows, 1):
+        html += (
+            f"<tr><td>{i}</td>"
+            f"<td>{row['kitap_id']}</td>"
+            f"<td>{row['ataui']}</td>"
+            f"<td>{row['avtor'] or ''}</td>"
+            f"<td>{row['alu_sany']}</td></tr>"
+        )
+
+    html += "</table></body></html>"
+    return html
+
 # =========================================================
 # 170 ОҚЫРМАНҒА КІТАП БЕРУДІ АЛДЫН АЛА ЖОСПАРЛАУ
 # =========================================================
