@@ -548,7 +548,7 @@ def home():
         <style>
             body {
                 font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-                background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+                background: url('/static/library-bg.jpg') center / cover fixed no-repeat;
                 margin: 0;
                 padding: 40px 20px;
                 min-height: 100vh;
@@ -560,10 +560,12 @@ def home():
             }
             .header-box {
                 text-align: center;
-                background: linear-gradient(135deg, #1e3a8a, #2563eb);
+                background: rgba(15, 23, 42, 0.78);
+                backdrop-filter: blur(12px);
                 padding: 25px 30px;
                 border-radius: 18px;
-                box-shadow: 0 10px 30px rgba(37,99,235,0.25);
+                box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+                border: 1px solid rgba(255, 255, 255, 0.2);
                 margin-bottom: 40px;
                 display: flex;
                 flex-direction: column;
@@ -576,8 +578,8 @@ def home():
                 border-radius: 50%;
                 object-fit: cover;
                 background: white;
-                box-shadow: 0 4px 15px rgba(0,0,0,0.2);
-                border: 3px solid rgba(255,255,255,0.8);
+                box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+                border: 3px solid rgba(255,255,255,0.9);
             }
             h1 {
                 margin: 0;
@@ -598,12 +600,12 @@ def home():
                 border-radius: 18px;
                 text-align: center;
                 border: 1px solid rgba(255, 255, 255, 0.8);
-                box-shadow: 0 8px 25px rgba(0, 0, 0, 0.05);
+                box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
                 transition: transform 0.3s ease, box-shadow 0.3s ease;
             }
             .card:hover {
                 transform: translateY(-5px);
-                box-shadow: 0 15px 35px rgba(0,0,0,0.1);
+                box-shadow: 0 15px 35px rgba(0,0,0,0.25);
             }
             .card-title {
                 font-size: 14px;
@@ -631,14 +633,15 @@ def home():
                 align-items: center;
                 justify-content: center;
                 padding: 20px;
-                background: #ffffff;
+                background: rgba(255, 255, 255, 0.92);
+                backdrop-filter: blur(8px);
                 border-radius: 16px;
                 text-decoration: none;
                 color: #1e293b;
                 font-size: 16px;
                 font-weight: 700;
-                border: 1px solid #e2e8f0;
-                box-shadow: 0 4px 15px rgba(0, 0, 0, 0.04);
+                border: 1px solid rgba(255, 255, 255, 0.5);
+                box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
                 transition: all 0.3s ease;
             }
             .button:hover {
@@ -646,7 +649,7 @@ def home():
                 color: #ffffff;
                 border-color: #2563eb;
                 transform: translateY(-4px);
-                box-shadow: 0 10px 25px rgba(37, 99, 235, 0.3);
+                box-shadow: 0 10px 25px rgba(37, 99, 235, 0.4);
             }
         </style>
     </head>
