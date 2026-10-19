@@ -512,7 +512,7 @@ def home():
                 <a class="button" href="/rating">👨‍🎓 Оқушылар рейтингісі</a>
                 <a class="button" href="/teacher-rating">👩‍🏫 Мұғалімдер рейтингісі</a>
                 <a class="button" href="/book-rating">🥇 Кітаптар рейтингісі</a>
-                <a href="{{ url_for('report') }}">Есеп</a>
+              
             </div>
         </div>
     </body>
