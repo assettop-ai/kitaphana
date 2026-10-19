@@ -393,6 +393,27 @@ def report():
           AND kb.berildi = 'Иә'
           AND ok.turi = 'Мұғалім'
     """)
+        
+    total_books = count_value("""
+        SELECT COALESCE(SUM(jalpy_sany), 0) AS value
+        FROM kitaptar
+    """)
+
+    total_readers = count_value("""
+        SELECT COUNT(*) AS value
+        FROM okuyandar
+        WHERE (synyp NOT LIKE '0%'
+          AND synyp != '0'
+          AND LOWER(synyp) NOT LIKE '%даярлық%')
+          OR turi = 'Мұғалім'
+    """)
+
+    returned_books = count_value("""
+        SELECT COUNT(*) AS value
+        FROM kitap_beru
+        WHERE berildi = 'Иә'
+          AND kaitaryldy = 'Иә'
+    """)
 
     currently_out = count_value("""
         SELECT COUNT(*) AS value
@@ -475,6 +496,22 @@ def report():
             <h1>📊 Кітапхана есебі</h1>
 
             <div class="cards">
+                
+                <div class="card">
+                    <div class="card-title">📚 Барлық кітап саны</div>
+                    <div class="number">{{ total_books }}</div>
+                </div>
+                
+                <div class="card">
+                    <div class="card-title">👥 Барлық оқырман саны</div>
+                    <div class="number">{{ total_readers }}</div>
+                </div>
+                
+                <div class="card">
+                    <div class="card-title">✅ Қайтарылған кітаптар</div>
+                    <div class="number">{{ returned_books }}</div>
+                </div>
+
                 <div class="card">
                     <div class="card-title">📚 Бүгін берілген кітаптар</div>
                     <div class="number">{{ today_issued }}</div>
@@ -516,7 +553,10 @@ def report():
     today_teachers=today_teachers,
     currently_out=currently_out,
     overdue=overdue,
-    this_month=this_month
+    this_month=this_month,
+    total_books=total_books,
+    total_readers=total_readers,
+    returned_books=returned_books,                             
     )
   
 @app.route("/")
@@ -820,15 +860,28 @@ def loans():
                 <td>{{ l['kuni'] }}</td>
                 <td>{{ l['merzim'] }}</td>
                 <td>{{ l['kaitaryldy'] }}</td>
-                <td>
-                    {% if session.get("role") == "librarian" and l['kaitaryldy'] == 'Жоқ' %}
-                        <form method="POST" action="/loans/return/{{ l['id'] }}" style="margin:0;">
-                            <button type="submit" style="background:#10b981; padding:5px 10px; font-size:12px;">Қайтарылды</button>
-                        </form>
-                    {% else %}
-                        <span>Аяқталды</span>
-                    {% endif %}
-                </td>
+                
+            <td>
+                {% if l['kaitaryldy'] == 'Иә' %}
+                    <span style="color:#059669; font-weight:bold;">
+                        Қайтарылды
+                    </span>
+                {% elif session.get("role") == "librarian" %}
+                    <form method="POST"
+                          action="/loans/return/{{ l['id'] }}"
+                          style="margin:0;">
+                        <button type="submit"
+                                style="background:#10b981; padding:5px 10px; font-size:12px;">
+                            Қайтару
+                        </button>
+                    </form>
+                {% else %}
+                    <span style="color:#dc2626; font-weight:bold;">
+                        Қайтарылмады
+                    </span>
+                {% endif %}
+            </td>
+
             </tr>
             {% endfor %}
         </table>
