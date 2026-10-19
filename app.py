@@ -733,6 +733,204 @@ def reset_readers():
 
     return redirect(url_for("readers"))
 
+# EXCEL ФАЙЛЫНАН ОҚЫРМАНДАРДЫ ИМПОРТТАУ
+@app.route("/readers/import", methods=["GET", "POST"])
+def readers_import():
+    if not is_logged_in():
+        return redirect(url_for("login"))
+
+    if not is_librarian():
+        return "Бұл бөлімге тек кітапханашы кіре алады", 403
+
+    message = ""
+
+    if request.method == "POST":
+        file = request.files.get("file")
+
+        if not file or not file.filename:
+            message = "Excel файлын таңдаңыз."
+        elif not file.filename.lower().endswith(".xlsx"):
+            message = "Тек .xlsx форматындағы файлды жүктеңіз."
+        else:
+            db = get_db()
+
+            try:
+                df = pd.read_excel(file)
+                df.columns = [
+                    re.sub(r"\s+", "", str(col)).casefold()
+                    for col in df.columns
+                ]
+
+                name_col = next(
+                    (c for c in df.columns
+                     if c in ("аты-жөні", "атыжөні", "атыжони")),
+                    None
+                )
+                class_col = next(
+                    (c for c in df.columns
+                     if c in (
+                         "сыныбы/пәні", "сыныбы/пэні",
+                         "сыныбыпәні", "сыныбы", "сыныбы/пән"
+                     )),
+                    None
+                )
+
+                if not name_col or not class_col:
+                    message = (
+                        "Excel бағандарын таба алмадым. "
+                        "Баған атаулары: Аты-жөні және Сыныбы/пәні болуы керек."
+                    )
+                else:
+                    existing_rows = db.execute(
+                        "SELECT aty, synyp FROM okuyandar"
+                    ).fetchall()
+
+                    existing = {
+                        (
+                            (r["aty"] or "").strip().casefold(),
+                            (r["synyp"] or "").strip().casefold()
+                        )
+                        for r in existing_rows
+                    }
+
+                    added = 0
+                    skipped = 0
+
+                    for _, row in df.iterrows():
+                        raw_name = row[name_col]
+                        raw_class = row[class_col]
+
+                        if pd.isna(raw_name) or pd.isna(raw_class):
+                            skipped += 1
+                            continue
+
+                        name = re.sub(
+                            r"^\s*\d+\s*[\.\)]\s*", "",
+                            str(raw_name)
+                        ).strip()
+
+                        synyp = str(raw_class).strip()
+
+                        if not name or not synyp:
+                            skipped += 1
+                            continue
+
+                        if synyp.startswith("0") or "даярлық" in synyp.casefold():
+                            skipped += 1
+                            continue
+
+                        key = (name.casefold(), synyp.casefold())
+
+                        if key in existing:
+                            skipped += 1
+                            continue
+
+                        # Сынып нөмірден басталса — оқушы.
+                        if re.match(
+                            r"^\d{1,2}\s*[-]?\s*[а-яәғқңөұүһі]?$",
+                            synyp.casefold()
+                        ):
+                            turi = "Оқушы"
+                        else:
+                            turi = "Мұғалім"
+
+                        if DATABASE_URL:
+                            db.execute("""
+                                INSERT INTO okuyandar
+                                (aty, synyp, turi, tirkelgen_kuni)
+                                VALUES (%s, %s, %s, %s)
+                            """, (
+                                name, synyp, turi, "2026-09-01"
+                            ))
+                        else:
+                            db.execute("""
+                                INSERT INTO okuyandar
+                                (aty, synyp, turi, tirkelgen_kuni)
+                                VALUES (?, ?, ?, ?)
+                            """, (
+                                name, synyp, turi, "2026-09-01"
+                            ))
+
+                        existing.add(key)
+                        added += 1
+
+                    db.commit()
+                    message = (
+                        f"Импорт аяқталды! Қосылды: {added}. "
+                        f"Өткізілді немесе бұрыннан бар: {skipped}."
+                    )
+
+            except Exception as e:
+                db.rollback()
+                message = f"Импорт қатесі: {e}"
+
+            finally:
+                db.close()
+
+    return render_template_string("""
+    <!DOCTYPE html>
+    <html lang="kk">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <title>Оқырмандарды Excel-ден жүктеу</title>
+        <style>
+            body {
+                font-family: Arial, sans-serif;
+                max-width: 650px;
+                margin: 40px auto;
+                padding: 20px;
+                background: #f2f2f2;
+            }
+            .box {
+                background: white;
+                padding: 24px;
+                border-radius: 12px;
+            }
+            input, button {
+                margin-top: 14px;
+                padding: 12px;
+            }
+            button {
+                background: #2563eb;
+                color: white;
+                border: 0;
+                border-radius: 6px;
+                cursor: pointer;
+            }
+            .message {
+                margin-top: 18px;
+                overflow-wrap: anywhere;
+            }
+        </style>
+    </head>
+    <body>
+        <div class="box">
+            <h2>📥 Excel-ден оқырмандарды жүктеу</h2>
+            <p>Файлда екі баған болсын:</p>
+            <ul>
+                <li>Аты-жөні</li>
+                <li>Сыныбы/пәні</li>
+            </ul>
+            <p>«Түрі» мен тіркелген күні автоматты толтырылады.</p>
+
+            <form method="POST" enctype="multipart/form-data">
+                <input type="file" name="file"
+                       accept=".xlsx" required>
+                <br>
+                <button type="submit">Excel файлын жүктеу</button>
+            </form>
+
+            {% if message %}
+                <p class="message">{{ message }}</p>
+            {% endif %}
+
+            <a href="/readers">← Оқырмандарға қайту</a>
+        </div>
+    </body>
+    </html>
+    """, message=message)
+
 @app.route("/readers")
 def readers():
     if not is_logged_in():
@@ -769,69 +967,113 @@ def readers():
     finally:
         db.close()
     return render_template_string("""
-    <!DOCTYPE html>
-    <html lang="kk">
-    <head>
-        <meta charset="UTF-8">
-        <title>Оқырмандар</title>
-        <style>
-            body { font-family: Arial; padding: 20px; background: #f2f2f2; max-width: 1100px; margin: auto; }
-            table { width: 100%; background: white; border-collapse: collapse; margin-top: 20px; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 8px #0001; }
-            th, td { padding: 12px; border: 1px solid #ddd; text-align: center; }
-            th { background: #2563eb; color: white; }
-            tr:nth-child(even) { background: #f9f9f9; }
-            .btn { display: inline-block; padding: 10px 16px; background: #2563eb; color: white; text-decoration: none; border-radius: 6px; margin-right: 10px; font-weight: bold; }
-        </style>
-    </head>
-    <body>
-        <h1>👥 Оқырмандар тізімі</h1>
-        {% if session.get("role") == "librarian" %}
-            <a class="btn" href="/readers/add">+ Оқырман қосу</a>
-        {% endif %}
-        <table>
-            <tr>
-                <th>ID</th>
-                <th>Аты-жөні</th>
-                <th>Сыныбы / Пәні</th>
-                
-{% if session.get("role") == "librarian" %}
-    <a class="btn" href="/readers/add">+ Оқырман қосу</a>
+    
+<!DOCTYPE html>
+<html lang="kk">
+<head>
+    <meta charset="UTF-8">
+    <title>Оқырмандар тізімі</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 20px;
+            background: #f2f2f2;
+            max-width: 1100px;
+            margin: auto;
+        }
+        .btn {
+            display: inline-block;
+            padding: 10px 16px;
+            background: #2563eb;
+            color: white;
+            text-decoration: none;
+            border-radius: 6px;
+            margin: 0 8px 10px 0;
+            font-weight: bold;
+        }
+        .delete-all {
+            background: #dc3545;
+            color: white;
+            border: 0;
+            padding: 10px 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+        table {
+            width: 100%;
+            background: white;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+        th, td {
+            padding: 12px;
+            border: 1px solid #ddd;
+            text-align: center;
+        }
+        th {
+            background: #2563eb;
+            color: white;
+        }
+    </style>
+</head>
+<body>
+    <h1>👥 Оқырмандар тізімі</h1>
 
-    <a class="btn" href="/readers/import">📥 Excel-ден жүктеу</a>
+    {% if session.get("role") == "librarian" %}
+        <a class="btn" href="/readers/add">+ Оқырман қосу</a>
+        <a class="btn" href="/readers/import">📥 Excel-ден жүктеу</a>
 
-    <form method="POST"
-          action="{{ url_for('reset_readers') }}"
-          style="display:inline-block; margin-top:10px;"
-          onsubmit="return confirm('НАЗАР АУДАР! Барлық оқырмандар мен кітап беру тарихы өшіріледі. Кітаптар сақталады. Жалғастырасыз ба?');">
+        <form method="POST"
+              action="{{ url_for('reset_readers') }}"
+              style="display:inline-block"
+              onsubmit="return confirm('Барлық оқырман мен кітап беру тарихын өшіресіз бе? Кітаптар сақталады.');">
+            <button type="submit" class="delete-all">
+                🗑 Барлық оқырманды тазалау
+            </button>
+        </form>
+    {% endif %}
 
-        <button type="submit"
-                style="background:#dc3545; color:white; border:0; padding:10px 16px; border-radius:6px; cursor:pointer; font-weight:bold;">
-            🗑 Барлық оқырманды тазалау
-        </button>
-    </form>
-{% endif %}
+    <table>
+        <tr>
+            <th>ID</th>
+            <th>Аты-жөні</th>
+            <th>Сыныбы / Пәні</th>
+            <th>Түрі</th>
+            {% if session.get("role") == "librarian" %}
+                <th>Әрекет</th>
+            {% endif %}
+        </tr>
 
-            </tr>
-            {% for r in readers %}
-            <tr>
-                <td>{{ r['id'] }}</td>
-                <td>{{ r['aty'] }}</td>
-                <td>{{ r['synyp'] }}</td>
-                {% if session.get("role") == "librarian" %}
-                <td>
-                    <form method="POST" action="/readers/delete/{{ r['id'] }}" onsubmit="return confirm('Өшіруге сенімдісіз бе?')" style="margin:0;">
-                        <button type="submit" style="background:#dc3545; color:white; border:0; padding:6px 12px; border-radius:4px; cursor:pointer;">Өшіру</button>
-                    </form>
-                </td>
-                {% endif %}
-            </tr>
-            {% endfor %}
-        </table>
-        <br>
-        <a href="/" style="color: #2563eb; font-weight: bold; text-decoration: none;">← Басты бетке қайту</a>
-    </body>
-    </html>
-    """, readers=readers)
+        {% for r in readers %}
+        <tr>
+            <td>{{ r['id'] }}</td>
+            <td>{{ r['aty'] }}</td>
+            <td>{{ r['synyp'] }}</td>
+            <td>{{ r['turi'] }}</td>
+
+            {% if session.get("role") == "librarian" %}
+            <td>
+                <form method="POST"
+                      action="/readers/delete/{{ r['id'] }}"
+                      onsubmit="return confirm('Осы оқырманды өшіресіз бе?');">
+                    <button type="submit">Өшіру</button>
+                </form>
+            </td>
+            {% endif %}
+        </tr>
+        {% else %}
+        <tr>
+            <td colspan="5">Оқырмандар тізімі бос.</td>
+        </tr>
+        {% endfor %}
+    </table>
+
+    <br>
+    <a href="/">← Басты бетке қайту</a>
+</body>
+</html>
+""", readers=readers)
 
 if __name__ == '__main__':
     init_db()
