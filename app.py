@@ -1074,7 +1074,112 @@ def readers():
 </body>
 </html>
 """, readers=readers)
+# =========================================================
+# КІТАПТАР ТІЗІМІ
+# =========================================================
 
+@app.route("/books")
+def books():
+    if not is_logged_in():
+        return redirect(url_for("login"))
+
+    db = get_db()
+
+    try:
+        books = db.execute("""
+            SELECT
+                kitaptar.*,
+                (
+                    SELECT COUNT(*)
+                    FROM kitap_beru
+                    WHERE kitap_beru.kitap_id = kitaptar.id
+                      AND kitap_beru.kaitaryldy = 'Жоқ'
+                ) AS berilgen_sany,
+                (
+                    kitaptar.jalpy_sany -
+                    (
+                        SELECT COUNT(*)
+                        FROM kitap_beru
+                        WHERE kitap_beru.kitap_id = kitaptar.id
+                          AND kitap_beru.kaitaryldy = 'Жоқ'
+                    )
+                ) AS korda_bar
+            FROM kitaptar
+            ORDER BY kitaptar.id DESC
+        """).fetchall()
+    finally:
+        db.close()
+
+    return render_template_string("""
+    <!DOCTYPE html>
+    <html lang="kk">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <title>Кітаптар</title>
+        <style>
+            body {
+                font-family: Arial, sans-serif;
+                padding: 20px;
+                background: #f2f2f2;
+            }
+            .table-wrap {
+                overflow-x: auto;
+            }
+            table {
+                width: 100%;
+                background: white;
+                border-collapse: collapse;
+            }
+            th, td {
+                padding: 10px;
+                border: 1px solid #ccc;
+                text-align: center;
+            }
+            th {
+                background: #eeeeee;
+            }
+        </style>
+    </head>
+    <body>
+        <h1>КІТАПТАР</h1>
+
+        <div class="table-wrap">
+        <table>
+            <tr>
+                <th>ID</th>
+                <th>Кітап ID</th>
+                <th>Атауы</th>
+                <th>Автор</th>
+                <th>Санаты</th>
+                <th>Жалпы саны</th>
+                <th>Берілген</th>
+                <th>Қолда бар</th>
+            </tr>
+            {% for book in books %}
+            <tr>
+                <td>{{ book["id"] }}</td>
+                <td>{{ book["kitap_id"] }}</td>
+                <td>{{ book["ataui"] }}</td>
+                <td>{{ book["avtor"] }}</td>
+                <td>{{ book["sanat"] }}</td>
+                <td>{{ book["jalpy_sany"] }}</td>
+                <td>{{ book["berilgen_sany"] }}</td>
+                <td>{{ book["korda_bar"] }}</td>
+            </tr>
+            {% else %}
+            <tr>
+                <td colspan="8">Кітаптар тізімі бос.</td>
+            </tr>
+            {% endfor %}
+        </table>
+        </div>
+
+        <br>
+        <a href="/">← Басты бетке қайту</a>
+    </body>
+    </html>
+    """, books=books)
 # =========================================================
 # 170 ОҚЫРМАНҒА КІТАП БЕРУДІ АЛДЫН АЛА ЖОСПАРЛАУ
 # =========================================================
