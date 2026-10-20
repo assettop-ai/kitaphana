@@ -9,6 +9,322 @@ import pandas as pd
 app = Flask(__name__)
 app.secret_key = "KITAPHANA_SECRET_2026"
 
+# =========================================================
+# ОРТАҚ ДИЗАЙН ЖӘНЕ НАВИГАЦИЯ (БАРЛЫҚ БЕТКЕ АВТОМАТТЫ ҚОСЫЛАДЫ)
+# =========================================================
+GLOBAL_CSS = """
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+    :root {
+        --primary: #4f46e5;
+        --primary-hover: #4338ca;
+        --secondary: #0ea5e9;
+        --success: #10b981;
+        --danger: #ef4444;
+        --warning: #f59e0b;
+        --dark: #0f172a;
+        --slate: #475569;
+        --light: #f8fafc;
+        --border: #e2e8f0;
+    }
+    * {
+        box-sizing: border-box;
+    }
+    body {
+        font-family: 'Inter', 'Segoe UI', sans-serif !important;
+        background: #f1f5f9;
+        color: var(--dark);
+        margin: 0;
+        padding-top: 85px !important;
+        padding-bottom: 40px;
+        min-height: 100vh;
+    }
+    /* Жоғарғы Навигация */
+    .top-navbar {
+        position: fixed;
+        top: 0; left: 0; right: 0;
+        height: 70px;
+        background: rgba(15, 23, 42, 0.92);
+        backdrop-filter: blur(14px);
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 0 28px;
+        z-index: 99999;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+        border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    }
+    .nav-brand {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        color: #ffffff;
+        font-weight: 800;
+        font-size: 18px;
+        text-decoration: none;
+        letter-spacing: 0.5px;
+    }
+    .nav-brand span {
+        background: linear-gradient(135deg, #60a5fa, #c084fc);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+    }
+    .nav-links {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        overflow-x: auto;
+        padding: 4px 0;
+    }
+    .nav-item {
+        color: #cbd5e1;
+        text-decoration: none;
+        padding: 8px 14px;
+        border-radius: 10px;
+        font-size: 13.5px;
+        font-weight: 600;
+        transition: all 0.2s ease;
+        white-space: nowrap;
+    }
+    .nav-item:hover {
+        color: #ffffff;
+        background: rgba(255, 255, 255, 0.08);
+    }
+    .nav-item.active {
+        color: #ffffff;
+        background: linear-gradient(135deg, #4f46e5, #3b82f6);
+        box-shadow: 0 4px 12px rgba(79, 70, 229, 0.35);
+    }
+    .nav-user {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+    }
+    .role-badge {
+        background: rgba(255, 255, 255, 0.12);
+        color: #e2e8f0;
+        padding: 6px 12px;
+        border-radius: 20px;
+        font-size: 12px;
+        font-weight: 600;
+        border: 1px solid rgba(255, 255, 255, 0.15);
+    }
+    .nav-logout {
+        background: linear-gradient(135deg, #ef4444, #dc2626);
+        color: #ffffff;
+        text-decoration: none;
+        padding: 8px 16px;
+        border-radius: 10px;
+        font-size: 13.5px;
+        font-weight: 600;
+        box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3);
+        transition: all 0.2s ease;
+        white-space: nowrap;
+    }
+    .nav-logout:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 16px rgba(239, 68, 68, 0.45);
+    }
+
+    /* Ортақ контейнерлер мен элементтер */
+    .page-container {
+        max-width: 1220px;
+        margin: 0 auto;
+        padding: 0 20px;
+    }
+    .page-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        flex-wrap: wrap;
+        gap: 16px;
+        margin-bottom: 28px;
+        background: white;
+        padding: 22px 28px;
+        border-radius: 20px;
+        box-shadow: 0 4px 20px rgba(15, 23, 42, 0.04);
+        border: 1px solid var(--border);
+    }
+    .page-title {
+        margin: 0;
+        font-size: 24px;
+        font-weight: 800;
+        color: var(--dark);
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+    .page-subtitle {
+        margin: 4px 0 0 0;
+        font-size: 14px;
+        color: var(--slate);
+    }
+
+    /* Іздеу жолағы */
+    .search-box {
+        position: relative;
+        min-width: 280px;
+        flex: 1;
+        max-width: 380px;
+    }
+    .search-input {
+        width: 100%;
+        padding: 12px 16px 12px 42px;
+        border: 1.5px solid var(--border);
+        border-radius: 12px;
+        font-size: 14px;
+        background: var(--light);
+        color: var(--dark);
+        transition: all 0.2s;
+        margin: 0 !important;
+    }
+    .search-input:focus {
+        background: white;
+        border-color: var(--primary);
+        outline: none;
+        box-shadow: 0 0 0 4px rgba(79, 70, 229, 0.12);
+    }
+    .search-icon {
+        position: absolute;
+        left: 14px;
+        top: 50%;
+        transform: translateY(-50%);
+        color: #94a3b8;
+        font-size: 16px;
+        pointer-events: none;
+    }
+
+    /* Кестелер */
+    .table-card {
+        background: white;
+        border-radius: 20px;
+        box-shadow: 0 10px 30px rgba(15, 23, 42, 0.05);
+        border: 1px solid var(--border);
+        overflow: hidden;
+    }
+    .table-responsive {
+        overflow-x: auto;
+    }
+    table.modern-table {
+        width: 100%;
+        border-collapse: collapse;
+        text-align: left;
+    }
+    table.modern-table th {
+        background: #f8fafc;
+        color: #475569;
+        font-weight: 700;
+        font-size: 12.5px;
+        text-transform: uppercase;
+        letter-spacing: 0.6px;
+        padding: 16px 20px;
+        border-bottom: 2px solid var(--border);
+    }
+    table.modern-table td {
+        padding: 15px 20px;
+        border-bottom: 1px solid #f1f5f9;
+        font-size: 14.5px;
+        color: #1e293b;
+        vertical-align: middle;
+    }
+    table.modern-table tr:hover td {
+        background: #f8fafc;
+    }
+    table.modern-table tr:last-child td {
+        border-bottom: none;
+    }
+
+    /* Капсулалар (Badges) */
+    .badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        padding: 5px 12px;
+        border-radius: 999px;
+        font-size: 12.5px;
+        font-weight: 700;
+        letter-spacing: 0.2px;
+    }
+    .badge-success { background: #dcfce7; color: #15803d; }
+    .badge-danger { background: #fee2e2; color: #b91c1c; }
+    .badge-warning { background: #fef3c7; color: #b45309; }
+    .badge-info { background: #e0f2fe; color: #0369a1; }
+    .badge-purple { background: #f3e8ff; color: #6b21a8; }
+
+    /* Батырмалар */
+    .btn-modern {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        padding: 11px 20px;
+        border-radius: 12px;
+        font-weight: 600;
+        font-size: 14px;
+        text-decoration: none;
+        border: none;
+        cursor: pointer;
+        transition: all 0.2s ease;
+    }
+    .btn-primary {
+        background: linear-gradient(135deg, #4f46e5, #3b82f6);
+        color: white;
+        box-shadow: 0 4px 14px rgba(79, 70, 229, 0.28);
+    }
+    .btn-primary:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 20px rgba(79, 70, 229, 0.4);
+    }
+    .btn-danger {
+        background: linear-gradient(135deg, #ef4444, #dc2626);
+        color: white;
+        box-shadow: 0 4px 14px rgba(239, 68, 68, 0.25);
+    }
+    .btn-danger:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 20px rgba(239, 68, 68, 0.35);
+    }
+    .btn-outline {
+        background: white;
+        color: var(--dark);
+        border: 1.5px solid var(--border);
+    }
+    .btn-outline:hover {
+        border-color: var(--primary);
+        color: var(--primary);
+    }
+
+    @media (max-width: 900px) {
+        .top-navbar {
+            padding: 0 14px;
+            height: auto;
+            min-height: 64px;
+            flex-wrap: wrap;
+            gap: 8px;
+            padding-top: 10px;
+            padding-bottom: 10px;
+        }
+        body {
+            padding-top: 115px !important;
+        }
+        .role-badge { display: none; }
+    }
+</style>
+<script>
+function filterTable(inputId, tableId) {
+    const input = document.getElementById(inputId);
+    const filter = input.value.toLowerCase();
+    const table = document.getElementById(tableId);
+    if (!table) return;
+    const tr = table.getElementsByTagName("tr");
+    for (let i = 1; i < tr.length; i++) {
+        let text = tr[i].textContent || tr[i].innerText;
+        tr[i].style.display = text.toLowerCase().indexOf(filter) > -1 ? "" : "none";
+    }
+}
+</script>
+"""
+
 @app.after_request
 def add_global_navigation(response):
     if request.path in ("/login", "/logout"):
@@ -18,74 +334,39 @@ def add_global_navigation(response):
     if not response.content_type or "text/html" not in response.content_type:
         return response
     html = response.get_data(as_text=True)
-    home_button = ""
-    if request.path != "/":
-        home_button = """
-        <a class="global-nav-home" href="/">
-            🏠 Басты бет
-        </a>
-        """
+
+    path = request.path
+    role_name = "Кітапханашы" if session.get("role") == "librarian" else "Әкімші"
+
+    nav_items = [
+        ("/", "🏠 Басты бет"),
+        ("/readers", "👥 Оқырмандар"),
+        ("/books", "📚 Кітаптар"),
+        ("/loans", "🔄 Кітап беру"),
+        ("/rating", "👨🎓 Оқушылар"),
+        ("/teacher-rating", "👩🏫 Мұғалімдер"),
+        ("/book-rating", "🥇 Кітап рейтингі"),
+        ("/report", "📊 Есеп"),
+    ]
+    links_html = ""
+    for href, label in nav_items:
+        active_cls = "active" if (path == href or (href != "/" and path.startswith(href))) else ""
+        links_html += f'<a class="nav-item {active_cls}" href="{href}">{label}</a>'
+
     navigation = f"""
-    <style>
-        body {{
-            padding-top: 65px !important;
-        }}
-        .global-nav {{
-            position: fixed;
-            top: 12px;
-            right: 20px;
-            z-index: 99999;
-            display: flex;
-            align-items: center;
-            justify-content: flex-end;
-            gap: 10px;
-            flex-wrap: wrap;
-        }}
-        .global-nav a {{
-            display: inline-block;
-            padding: 10px 16px;
-            border-radius: 10px;
-            text-decoration: none;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            font-size: 14px;
-            font-weight: 600;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-            transition: all 0.2s ease;
-        }}
-        .global-nav a:hover {{
-            transform: translateY(-2px);
-            box-shadow: 0 6px 15px rgba(0,0,0,0.15);
-        }}
-        .global-nav-home {{
-            background: #ffffff;
-            color: #1e293b;
-            border: 1px solid #e2e8f0;
-        }}
-        .global-nav-logout {{
-            background: linear-gradient(135deg, #ef4444, #dc2626);
-            color: #ffffff;
-        }}
-        @media (max-width: 480px) {{
-            .global-nav {{
-                right: 10px;
-                top: 8px;
-                gap: 6px;
-            }}
-            .global-nav a {{
-                padding: 8px 12px;
-                font-size: 12px;
-            }}
-            body {{
-                padding-top: 60px !important;
-            }}
-        }}
-    </style>
-    <div class="global-nav">
-        {home_button}
-        <a class="global-nav-logout" href="/logout">
-            🚪 Шығу
+    {GLOBAL_CSS}
+    <nav class="top-navbar">
+        <a class="nav-brand" href="/">
+            📚 <span>SMART КІТАПХАНА</span>
         </a>
-    </div>
+        <div class="nav-links">
+            {links_html}
+        </div>
+        <div class="nav-user">
+            <span class="role-badge">👤 {role_name}</span>
+            <a class="nav-logout" href="/logout">🚪 Шығу</a>
+        </div>
+    </nav>
     """
     if "</body>" in html:
         html = html.replace("</body>", navigation + "</body>", 1)
@@ -94,9 +375,9 @@ def add_global_navigation(response):
     response.set_data(html)
     return response
 
-@app.route("/logout") 
-def logout(): 
-    session.clear() 
+@app.route("/logout")
+def logout():
+    session.clear()
     return redirect(url_for("login"))
 
 USERS = {
@@ -213,9 +494,11 @@ def init_db():
             )
     db.commit()
 
-    # personal.xlsx ФАЙЛЫНАН ОҚЫРМАНДАРДЫ ЖҮКТЕУ
+    # personal.xlsx ФАЙЛЫНАН ОҚЫРМАНДАРДЫ ЖҮКТЕУ (Тек база бос болса немесе жаңа адам болса)
     teachers_file = "personal.xlsx"
     if os.path.exists(teachers_file):
+        existing_rows = db.execute("SELECT aty, synyp FROM okuyandar").fetchall()
+        existing = {((r["aty"] or "").strip().casefold(), (r["synyp"] or "").strip().casefold()) for r in existing_rows}
         df_t = pd.read_excel(teachers_file)
         df_t.columns = [str(col).strip() for col in df_t.columns]
         for _, row in df_t.iterrows():
@@ -228,6 +511,9 @@ def init_db():
             if not synyp or synyp.lower() == "nan":
                 continue
             if synyp.startswith("0") or "даярлық" in synyp.lower():
+                continue
+            key = (aty.casefold(), synyp.casefold())
+            if key in existing:
                 continue
             if re.match(r"^\d+\s*[-]?\s*[а-яәғқңөұүһі]?$", synyp.lower()):
                 turi = "Оқушы"
@@ -245,9 +531,13 @@ def init_db():
                     (aty, synyp, turi, tirkelgen_kuni)
                     VALUES (?, ?, ?, ?)
                 """, (aty, synyp, turi, "2026-09-01"))
+            existing.add(key)
         db.commit()
     db.close()
 
+# =========================================================
+# АВТОРИЗАЦИЯ (LOGIN)
+# =========================================================
 @app.route("/login", methods=["GET", "POST"])
 def login():
     error = ""
@@ -259,7 +549,7 @@ def login():
             session["username"] = username
             session["role"] = user["role"]
             return redirect(url_for("home"))
-        error = "Логин немесе пароль қате"
+        error = "Логин немесе құпиясөз қате!"
     return render_template_string("""
     <!DOCTYPE html>
     <html lang="kk">
@@ -267,99 +557,453 @@ def login():
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <title>Кітапханаға кіру</title>
+        <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
         <style>
+            * { box-sizing: border-box; }
             body {
-                font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-                background: linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%);
+                font-family: 'Inter', sans-serif;
+                background: radial-gradient(circle at top left, #1e1b4b, #0f172a 60%, #020617);
                 display: flex;
                 justify-content: center;
                 align-items: center;
                 min-height: 100vh;
                 margin: 0;
+                padding: 20px;
+                position: relative;
+                overflow: hidden;
             }
-            .login-box {
-                background: rgba(255, 255, 255, 0.95);
-                backdrop-filter: blur(10px);
-                width: 90%;
-                max-width: 400px;
-                padding: 40px 30px;
+            /* Декоративті жарық шарлар */
+            .blob-1, .blob-2 {
+                position: absolute;
+                border-radius: 50%;
+                filter: blur(80px);
+                z-index: 0;
+            }
+            .blob-1 {
+                width: 350px; height: 350px;
+                background: rgba(79, 70, 229, 0.4);
+                top: -80px; left: -80px;
+            }
+            .blob-2 {
+                width: 300px; height: 300px;
+                background: rgba(14, 165, 233, 0.3);
+                bottom: -60px; right: -60px;
+            }
+            .login-card {
+                position: relative;
+                z-index: 1;
+                background: rgba(255, 255, 255, 0.07);
+                backdrop-filter: blur(20px);
+                width: 100%;
+                max-width: 420px;
+                padding: 45px 35px;
+                border-radius: 28px;
+                box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+                border: 1px solid rgba(255, 255, 255, 0.15);
+                text-align: center;
+                color: white;
+            }
+            .logo-circle {
+                width: 72px; height: 72px;
+                background: linear-gradient(135deg, #4f46e5, #0ea5e9);
                 border-radius: 20px;
-                box-shadow: 0 15px 35px rgba(0,0,0,0.2);
-                border: 1px solid rgba(255,255,255,0.3);
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                font-size: 34px;
+                margin: 0 auto 20px auto;
+                box-shadow: 0 10px 25px rgba(79, 70, 229, 0.4);
             }
             h2 {
-                text-align: center;
-                margin-bottom: 30px;
-                color: #1e293b;
-                font-weight: 700;
+                margin: 0 0 8px 0;
+                font-size: 24px;
+                font-weight: 800;
+                letter-spacing: -0.5px;
+            }
+            p.sub {
+                margin: 0 0 30px 0;
+                color: #94a3b8;
+                font-size: 14px;
+            }
+            .input-group {
+                text-align: left;
+                margin-bottom: 18px;
+            }
+            .input-group label {
+                display: block;
+                font-size: 13px;
+                font-weight: 600;
+                color: #cbd5e1;
+                margin-bottom: 8px;
             }
             input {
                 width: 100%;
-                box-sizing: border-box;
                 padding: 14px 16px;
-                margin-bottom: 20px;
-                border: 1px solid #cbd5e1;
-                border-radius: 12px;
+                border: 1px solid rgba(255, 255, 255, 0.18);
+                border-radius: 14px;
                 font-size: 15px;
-                transition: all 0.3s;
-                background: #f8fafc;
+                background: rgba(15, 23, 42, 0.6);
+                color: white;
+                transition: all 0.25s;
             }
+            input::placeholder { color: #64748b; }
             input:focus {
-                border-color: #2563eb;
-                background: #ffffff;
+                border-color: #60a5fa;
+                background: rgba(15, 23, 42, 0.9);
                 outline: none;
-                box-shadow: 0 0 0 4px rgba(37,99,235,0.1);
+                box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.2);
             }
             button {
                 width: 100%;
-                padding: 14px;
-                background: linear-gradient(135deg, #2563eb, #1d4ed8);
+                padding: 15px;
+                margin-top: 10px;
+                background: linear-gradient(135deg, #4f46e5, #2563eb);
                 color: white;
                 border: none;
-                border-radius: 12px;
+                border-radius: 14px;
                 font-size: 16px;
-                font-weight: 600;
+                font-weight: 700;
                 cursor: pointer;
-                box-shadow: 0 4px 12px rgba(37,99,235,0.3);
-                transition: all 0.3s;
+                box-shadow: 0 10px 20px rgba(37, 99, 235, 0.35);
+                transition: all 0.25s;
             }
             button:hover {
                 transform: translateY(-2px);
-                box-shadow: 0 6px 18px rgba(37,99,235,0.4);
+                box-shadow: 0 14px 28px rgba(37, 99, 235, 0.5);
             }
             .error {
-                color: #dc2626;
-                text-align: center;
+                background: rgba(239, 68, 68, 0.15);
+                border: 1px solid rgba(239, 68, 68, 0.4);
+                color: #fca5a5;
+                padding: 12px;
+                border-radius: 12px;
                 margin-bottom: 20px;
-                font-weight: 600;
                 font-size: 14px;
-                background: #fee2e2;
-                padding: 10px;
-                border-radius: 8px;
+                font-weight: 600;
             }
         </style>
     </head>
     <body>
-        <div class="login-box">
-            <h2>📚 Мектеп кітапханасы</h2>
+        <div class="blob-1"></div>
+        <div class="blob-2"></div>
+        <div class="login-card">
+            <div class="logo-circle">📚</div>
+            <h2>Мектеп кітапханасы</h2>
+            <p class="sub">Цифрлық басқару жүйесіне қош келдіңіз</p>
             {% if error %}
-                <div class="error">{{ error }}</div>
+                <div class="error">⚠️ {{ error }}</div>
             {% endif %}
             <form method="post">
-                <input type="text" name="username" placeholder="Логин" required>
-                <input type="password" name="password" placeholder="Пароль" required>
-                <button type="submit">Кіру</button>
+                <div class="input-group">
+                    <label>Логин</label>
+                    <input type="text" name="username" placeholder="Мысалы: library" required>
+                </div>
+                <div class="input-group">
+                    <label>Құпиясөз</label>
+                    <input type="password" name="password" placeholder="••••••••" required>
+                </div>
+                <button type="submit">Жүйеге кіру →</button>
             </form>
         </div>
     </body>
     </html>
-    """)
+    """, error=error)
 
 def is_logged_in():
     return "username" in session
 
 def is_librarian():
     return session.get("role") == "librarian"
+
+# =========================================================
+# БАСТЫ БЕТ (HOME DASHBOARD)
+# =========================================================
+@app.route("/")
+def home():
+    if "username" not in session:
+        return redirect(url_for("login"))
+    db = get_db()
+    total_books = db.execute("SELECT COALESCE(SUM(jalpy_sany), 0) AS value FROM kitaptar").fetchone()["value"]
+    total_readers = db.execute("SELECT COUNT(*) AS value FROM okuyandar WHERE (synyp NOT LIKE '0%' AND synyp != '0' AND LOWER(synyp) NOT LIKE '%даярлық%') OR turi = 'Мұғалім'").fetchone()["value"]
+    currently_out = db.execute("SELECT COUNT(*) AS value FROM kitap_beru WHERE berildi = 'Иә' AND kaitaryldy = 'Жоқ'").fetchone()["value"]
+    if DATABASE_URL:
+        overdue = db.execute("SELECT COUNT(*) AS value FROM kitap_beru WHERE berildi = 'Иә' AND kaitaryldy = 'Жоқ' AND merzim::date < CURRENT_DATE").fetchone()["value"]
+    else:
+        overdue = db.execute("SELECT COUNT(*) FROM kitap_beru WHERE berildi = 'Иә' AND kaitaryldy = 'Жоқ' AND date(merzim) < date('now', 'localtime')").fetchone()[0]
+    db.close()
+    
+    return render_template_string("""
+    <!DOCTYPE html>
+    <html lang="kk">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Кітапхана басқару жүйесі</title>
+        <style>
+            body {
+                background: linear-gradient(180deg, #0f172a 0%, #1e293b 340px, #f1f5f9 340px, #f1f5f9 100%) !important;
+            }
+            .hero-banner {
+                background: linear-gradient(135deg, rgba(79, 70, 229, 0.25), rgba(14, 165, 233, 0.15)),
+                            url('/static/library-bg.jpg') center/cover no-repeat;
+                border-radius: 26px;
+                padding: 40px 35px;
+                color: white;
+                display: flex;
+                align-items: center;
+                gap: 28px;
+                margin-bottom: 30px;
+                box-shadow: 0 20px 40px rgba(0, 0, 0, 0.25);
+                border: 1px solid rgba(255, 255, 255, 0.15);
+                position: relative;
+                overflow: hidden;
+            }
+            .hero-banner::before {
+                content: "";
+                position: absolute;
+                inset: 0;
+                background: rgba(15, 23, 42, 0.72);
+                backdrop-filter: blur(6px);
+                z-index: 0;
+            }
+            .hero-content {
+                position: relative;
+                z-index: 1;
+                display: flex;
+                align-items: center;
+                gap: 25px;
+                flex-wrap: wrap;
+            }
+            .header-logo {
+                width: 95px;
+                height: 95px;
+                border-radius: 24px;
+                object-fit: cover;
+                background: white;
+                padding: 4px;
+                box-shadow: 0 10px 25px rgba(0,0,0,0.3);
+            }
+            .hero-text h1 {
+                margin: 0 0 8px 0;
+                font-size: 28px;
+                font-weight: 800;
+                letter-spacing: 0.5px;
+            }
+            .hero-text p {
+                margin: 0;
+                color: #cbd5e1;
+                font-size: 15px;
+            }
+
+            /* Статистика карточкалары */
+            .stats-grid {
+                display: grid;
+                grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+                gap: 20px;
+                margin-bottom: 35px;
+            }
+            .stat-card {
+                background: white;
+                padding: 24px;
+                border-radius: 22px;
+                box-shadow: 0 10px 25px rgba(15, 23, 42, 0.06);
+                border: 1px solid #e2e8f0;
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                transition: transform 0.25s ease, box-shadow 0.25s ease;
+            }
+            .stat-card:hover {
+                transform: translateY(-5px);
+                box-shadow: 0 16px 35px rgba(15, 23, 42, 0.1);
+            }
+            .stat-info span {
+                font-size: 13px;
+                font-weight: 700;
+                color: #64748b;
+                text-transform: uppercase;
+                letter-spacing: 0.5px;
+            }
+            .stat-info h3 {
+                font-size: 36px;
+                font-weight: 800;
+                margin: 8px 0 0 0;
+                color: #0f172a;
+            }
+            .stat-icon {
+                width: 60px; height: 60px;
+                border-radius: 18px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                font-size: 28px;
+            }
+            .ic-blue { background: #e0e7ff; color: #4f46e5; }
+            .ic-green { background: #dcfce7; color: #16a34a; }
+            .ic-amber { background: #fef3c7; color: #d97706; }
+            .ic-red { background: #fee2e2; color: #dc2626; }
+
+            /* Жылдам мәзір плиткалары */
+            .section-heading {
+                font-size: 18px;
+                font-weight: 800;
+                color: #1e293b;
+                margin: 0 0 18px 0;
+            }
+            .menu-grid {
+                display: grid;
+                grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+                gap: 18px;
+            }
+            .menu-tile {
+                background: white;
+                padding: 22px;
+                border-radius: 20px;
+                border: 1px solid #e2e8f0;
+                text-decoration: none;
+                color: #0f172a;
+                display: flex;
+                align-items: center;
+                gap: 18px;
+                box-shadow: 0 4px 15px rgba(0, 0, 0, 0.03);
+                transition: all 0.25s ease;
+            }
+            .menu-tile:hover {
+                transform: translateY(-4px);
+                border-color: #4f46e5;
+                box-shadow: 0 12px 28px rgba(79, 70, 229, 0.12);
+            }
+            .tile-icon {
+                width: 54px; height: 54px;
+                border-radius: 16px;
+                background: #f8fafc;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                font-size: 26px;
+                transition: all 0.25s;
+            }
+            .menu-tile:hover .tile-icon {
+                background: #4f46e5;
+                color: white;
+                transform: scale(1.08);
+            }
+            .tile-text h4 {
+                margin: 0 0 4px 0;
+                font-size: 16px;
+                font-weight: 700;
+            }
+            .tile-text p {
+                margin: 0;
+                font-size: 13px;
+                color: #64748b;
+            }
+        </style>
+    </head>
+    <body>
+        <div class="page-container">
+            <div class="hero-banner">
+                <div class="hero-content">
+                    <img src="/static/emblem.png" onerror="this.style.display='none'" alt="Эмблема" class="header-logo">
+                    <div class="hero-text">
+                        <h1>МЕКТЕП КІТАПХАНАСЫ БАСҚАРУ ЖҮЙЕСІ</h1>
+                        <p>Кітап қорын, оқырмандарды және кітап айналымын автоматтандырылған бақылау панелі</p>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-info">
+                        <span>Барлық кітап қоры</span>
+                        <h3>{{ total_books }}</h3>
+                    </div>
+                    <div class="stat-icon ic-blue">📖</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-info">
+                        <span>Тіркелген оқырмандар</span>
+                        <h3>{{ total_readers }}</h3>
+                    </div>
+                    <div class="stat-icon ic-green">👥</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-info">
+                        <span>Қазір қолда жүрген</span>
+                        <h3>{{ currently_out }}</h3>
+                    </div>
+                    <div class="stat-icon ic-amber">📤</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-info">
+                        <span>Мерзімі өткендер</span>
+                        <h3 style="color:#dc2626;">{{ overdue }}</h3>
+                    </div>
+                    <div class="stat-icon ic-red">⚠️</div>
+                </div>
+            </div>
+            
+            <h3 class="section-heading">⚡ Негізгі бөлімдер</h3>
+            <div class="menu-grid">
+                <a class="menu-tile" href="/loans">
+                    <div class="tile-icon">🔄</div>
+                    <div class="tile-text">
+                        <h4>Кітап беру және қайтару</h4>
+                        <p>Оқырманға кітап рәсімдеу журналы</p>
+                    </div>
+                </a>
+                <a class="menu-tile" href="/readers">
+                    <div class="tile-icon">👥</div>
+                    <div class="tile-text">
+                        <h4>Оқырмандар тізімі</h4>
+                        <p>Оқушылар мен мұғалімдер базасы</p>
+                    </div>
+                </a>
+                <a class="menu-tile" href="/books">
+                    <div class="tile-icon">📚</div>
+                    <div class="tile-text">
+                        <h4>Кітаптар қоры</h4>
+                        <p>Барлық кітаптар мен қалдық саны</p>
+                    </div>
+                </a>
+                <a class="menu-tile" href="/rating">
+                    <div class="tile-icon">👨🎓</div>
+                    <div class="tile-text">
+                        <h4>Оқушылар рейтингісі</h4>
+                        <p>Ең көп кітап оқитын үздік оқушылар</p>
+                    </div>
+                </a>
+                <a class="menu-tile" href="/teacher-rating">
+                    <div class="tile-icon">👩🏫</div>
+                    <div class="tile-text">
+                        <h4>Мұғалімдер рейтингісі</h4>
+                        <p>Белсенді оқырман ұстаздар тізімі</p>
+                    </div>
+                </a>
+                <a class="menu-tile" href="/book-rating">
+                    <div class="tile-icon">🥇</div>
+                    <div class="tile-text">
+                        <h4>Кітаптар рейтингісі</h4>
+                        <p>Сұранысы ең жоғары кітаптар</p>
+                    </div>
+                </a>
+                <a class="menu-tile" href="/report">
+                    <div class="tile-icon">📊</div>
+                    <div class="tile-text">
+                        <h4>Толық есептер</h4>
+                        <p>Күндік, айлық және жалпы статистика</p>
+                    </div>
+                </a>
+            </div>
+        </div>
+    </body>
+    </html>
+    """,
+    total_books=total_books,
+    total_readers=total_readers,
+    currently_out=currently_out,
+    overdue=overdue
+    )
 
 # =========================================================
 # ЕСЕП БӨЛІМІ
@@ -400,76 +1044,57 @@ def report():
         <meta name="viewport" content="width=device-width, initial-scale=1">
         <title>Кітапхана есебі</title>
         <style>
-            body {
-                font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-                background: #f1f5f9;
-                margin: 0;
-                padding: 30px 20px;
-            }
-            .container {
-                max-width: 1100px;
-                margin: auto;
-            }
-            h1 {
-                text-align: center;
-                color: #1e293b;
-                margin-bottom: 30px;
-                font-weight: 700;
-            }
             .cards {
                 display: grid;
-                grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+                grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
                 gap: 20px;
             }
             .card {
                 background: white;
-                padding: 25px;
-                border-radius: 16px;
-                box-shadow: 0 4px 20px rgba(0,0,0,0.05);
+                padding: 26px;
+                border-radius: 20px;
+                box-shadow: 0 8px 24px rgba(15, 23, 42, 0.05);
                 border: 1px solid #e2e8f0;
+                position: relative;
+                overflow: hidden;
                 transition: transform 0.2s;
             }
-            .card:hover {
-                transform: translateY(-4px);
-                box-shadow: 0 8px 25px rgba(0,0,0,0.08);
+            .card::after {
+                content: "";
+                position: absolute;
+                top: 0; left: 0; width: 6px; height: 100%;
+                background: #4f46e5;
             }
+            .card.danger-card::after { background: #ef4444; }
+            .card.success-card::after { background: #10b981; }
+            .card:hover { transform: translateY(-4px); }
             .card-title {
                 color: #64748b;
-                font-size: 14px;
-                font-weight: 600;
+                font-size: 13.5px;
+                font-weight: 700;
                 text-transform: uppercase;
                 letter-spacing: 0.5px;
             }
             .number {
-                font-size: 38px;
+                font-size: 40px;
                 font-weight: 800;
-                color: #2563eb;
+                color: #0f172a;
                 margin-top: 12px;
             }
-            .danger {
-                color: #dc2626;
-            }
-            .back-link {
-                display: inline-block;
-                margin-top: 30px;
-                color: #2563eb;
-                font-weight: 700;
-                text-decoration: none;
-                background: white;
-                padding: 12px 20px;
-                border-radius: 10px;
-                box-shadow: 0 2px 10px rgba(0,0,0,0.05);
-                transition: all 0.2s;
-            }
-            .back-link:hover {
-                background: #2563eb;
-                color: white;
-            }
+            .danger { color: #dc2626; }
+            .success { color: #059669; }
         </style>
     </head>
     <body>
-        <div class="container">
-            <h1>📊 Кітапхана есебі</h1>
+        <div class="page-container">
+            <div class="page-header">
+                <div>
+                    <h1 class="page-title">📊 Кітапхананың толық есебі</h1>
+                    <p class="page-subtitle">Кітап қоры мен оқырмандар белсенділігінің статистикалық көрсеткіштері</p>
+                </div>
+                <a class="btn-modern btn-outline" href="/">← Басты бетке</a>
+            </div>
+
             <div class="cards">
                 <div class="card">
                     <div class="card-title">📚 Барлық кітап саны</div>
@@ -479,9 +1104,9 @@ def report():
                     <div class="card-title">👥 Барлық оқырман саны</div>
                     <div class="number">{{ total_readers }}</div>
                 </div>
-                <div class="card">
+                <div class="card success-card">
                     <div class="card-title">✅ Қайтарылған кітаптар</div>
-                    <div class="number">{{ returned_books }}</div>
+                    <div class="number success">{{ returned_books }}</div>
                 </div>
                 <div class="card">
                     <div class="card-title">📚 Бүгін берілген кітаптар</div>
@@ -496,11 +1121,11 @@ def report():
                     <div class="number">{{ today_teachers }}</div>
                 </div>
                 <div class="card">
-                    <div class="card-title">📤 Қазір берілген</div>
+                    <div class="card-title">📤 Қазір қолда берілген</div>
                     <div class="number">{{ currently_out }}</div>
                 </div>
-                <div class="card">
-                    <div class="card-title">⚠️ Мерзімі өткен</div>
+                <div class="card danger-card">
+                    <div class="card-title">⚠️ Қайтару мерзімі өткен</div>
                     <div class="number danger">{{ overdue }}</div>
                 </div>
                 <div class="card">
@@ -508,7 +1133,6 @@ def report():
                     <div class="number">{{ this_month }}</div>
                 </div>
             </div>
-            <a class="back-link" href="/">← Басты бетке қайту</a>
         </div>
     </body>
     </html>
@@ -522,185 +1146,6 @@ def report():
     total_books=total_books,
     total_readers=total_readers,
     returned_books=returned_books,                             
-    )
-  
-@app.route("/")
-def home():
-    if "username" not in session:
-        return redirect(url_for("login"))
-    db = get_db()
-    total_books = db.execute("SELECT COALESCE(SUM(jalpy_sany), 0) AS value FROM kitaptar").fetchone()["value"]
-    total_readers = db.execute("SELECT COUNT(*) AS value FROM okuyandar WHERE (synyp NOT LIKE '0%' AND synyp != '0' AND LOWER(synyp) NOT LIKE '%даярлық%') OR turi = 'Мұғалім'").fetchone()["value"]
-    currently_out = db.execute("SELECT COUNT(*) AS value FROM kitap_beru WHERE berildi = 'Иә' AND kaitaryldy = 'Жоқ'").fetchone()["value"]
-    if DATABASE_URL:
-        overdue = db.execute("SELECT COUNT(*) AS value FROM kitap_beru WHERE berildi = 'Иә' AND kaitaryldy = 'Жоқ' AND merzim::date < CURRENT_DATE").fetchone()["value"]
-    else:
-        overdue = db.execute("SELECT COUNT(*) FROM kitap_beru WHERE berildi = 'Иә' AND kaitaryldy = 'Жоқ' AND date(merzim) < date('now', 'localtime')").fetchone()[0]
-    db.close()
-    
-    return render_template_string("""
-    <!DOCTYPE html>
-    <html lang="kk">
-    <head>
-        <meta charset="UTF-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>Кітапхана басқару жүйесі</title>
-        <style>
-            body {
-                font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-                background: url('/static/library-bg.jpg') center / cover fixed no-repeat;
-                margin: 0;
-                padding: 40px 20px;
-                min-height: 100vh;
-                box-sizing: border-box;
-            }
-            .container {
-                max-width: 1100px;
-                margin: 0 auto;
-            }
-            .header-box {
-                text-align: center;
-                background: rgba(15, 23, 42, 0.78);
-                backdrop-filter: blur(12px);
-                padding: 25px 30px;
-                border-radius: 18px;
-                box-shadow: 0 10px 30px rgba(0,0,0,0.3);
-                border: 1px solid rgba(255, 255, 255, 0.2);
-                margin-bottom: 40px;
-                display: flex;
-                flex-direction: column;
-                align-items: center;
-                gap: 15px;
-            }
-            .header-logo {
-                width: 90px;
-                height: 90px;
-                border-radius: 50%;
-                object-fit: cover;
-                background: white;
-                box-shadow: 0 4px 15px rgba(0,0,0,0.3);
-                border: 3px solid rgba(255,255,255,0.9);
-            }
-            h1 {
-                margin: 0;
-                color: #ffffff;
-                letter-spacing: 1.5px;
-                font-size: 26px;
-            }
-            .cards {
-                display: grid;
-                grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-                gap: 20px;
-                margin-bottom: 40px;
-            }
-            .card {
-                background: rgba(255, 255, 255, 0.9);
-                backdrop-filter: blur(10px);
-                padding: 25px 20px;
-                border-radius: 18px;
-                text-align: center;
-                border: 1px solid rgba(255, 255, 255, 0.8);
-                box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
-                transition: transform 0.3s ease, box-shadow 0.3s ease;
-            }
-            .card:hover {
-                transform: translateY(-5px);
-                box-shadow: 0 15px 35px rgba(0,0,0,0.25);
-            }
-            .card-title {
-                font-size: 14px;
-                color: #64748b;
-                font-weight: 700;
-                text-transform: uppercase;
-                letter-spacing: 0.5px;
-            }
-            .number {
-                font-size: 42px;
-                font-weight: 800;
-                color: #1e293b;
-                margin-top: 12px;
-            }
-            .number.danger {
-                color: #dc2626;
-            }
-            .menu {
-                display: flex;
-                flex-wrap: wrap;
-                justify-content: center;
-                align-items: center;
-                gap: 12px 28px;
-                padding: 20px 10px;
-                background: rgba(255, 255, 255, 0.88);
-                border-radius: 12px;
-            }
-            
-            .button {
-                display: inline-block;
-                padding: 4px 0;
-                background: transparent;
-                border: none;
-                box-shadow: none;
-                border-radius: 0;
-                text-decoration: none;
-                color: #1e40af;
-                font-size: 16px;
-                font-weight: 600;
-                transition: color 0.2s ease;
-            }
-            
-            .button:hover {
-                background: transparent;
-                color: #dc2626;
-                border: none;
-                box-shadow: none;
-                transform: none;
-                text-decoration: underline;
-            }
-        </style>
-    </head>
-    <body>
-        <div class="container">
-            <div class="header-box">
-                <img src="/static/emblem.png" alt="Эмблема" class="header-logo">
-                <h1>МЕКТЕП КІТАПХАНАСЫ БАСҚАРУ ЖҮЙЕСІ</h1>
-            </div>
-            
-            <div class="cards">
-                <div class="card">
-                    <div class="card-title">📖 Барлық кітап</div>
-                    <div class="number">{{ total_books }}</div>
-                </div>
-                <div class="card">
-                    <div class="card-title">👥 Оқырмандар</div>
-                    <div class="number">{{ total_readers }}</div>
-                </div>
-                <div class="card">
-                    <div class="card-title">📤 Қазір берілген</div>
-                    <div class="number">{{ currently_out }}</div>
-                </div>
-                <div class="card">
-                    <div class="card-title">⚠️ Мерзімі өткен</div>
-                    <div class="number danger">{{ overdue }}</div>
-                </div>
-            </div>
-            
-            <div class="menu">
-                <a class="button" href="/readers">👥 Оқырмандар тізімі</a>
-                <a class="button" href="/books">📚 Кітаптар қоры</a>
-                <a class="button" href="/loans">🔄 Кітап беру және қайтару</a>
-                <a class="button" href="/rating">👨🎓 Оқушылар рейтингісі</a>
-                <a class="button" href="/teacher-rating">👩🏫 Мұғалімдер рейтингісі</a>
-                <a class="button" href="/book-rating">🥇 Кітаптар рейтингісі</a>
-                <a class="button" href="/report">📊 Толық есептер</a>
-            </div>
-        </div>
-    </body>
-    </html>
-    """,
-    total_books=total_books,
-    total_readers=total_readers,
-    currently_out=currently_out,
-    overdue=overdue
     )
 
 # =========================================================
@@ -757,101 +1202,153 @@ def loans():
     <html lang="kk">
     <head>
         <meta charset="UTF-8">
-        <title>Кітап беру</title>
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <title>Кітап беру және қайтару</title>
         <style>
-            body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; padding: 30px 20px; background: #f1f5f9; max-width: 1200px; margin: auto; }
-            h1 { color: #1e293b; text-align: center; margin-bottom: 25px; }
-            table { width: 100%; background: white; border-collapse: collapse; margin-top: 20px; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
-            th, td { padding: 14px 12px; border: 1px solid #e2e8f0; text-align: center; font-size: 14px; }
-            th { background: #2563eb; color: white; font-weight: 600; }
-            tr:nth-child(even) { background: #f8fafc; }
-            .form-box { background: white; padding: 25px; border-radius: 16px; box-shadow: 0 4px 20px rgba(0,0,0,0.05); margin-bottom: 30px; border: 1px solid #e2e8f0; }
-            select, input { padding: 12px; margin: 8px 0 20px 0; width: 100%; max-width: 450px; display: block; border: 1px solid #cbd5e1; border-radius: 10px; background: #f8fafc; }
-            select:focus, input:focus { border-color: #2563eb; background: #fff; outline: none; box-shadow: 0 0 0 3px rgba(37,99,235,0.1); }
-            button { padding: 12px 20px; background: #2563eb; color: white; border: 0; border-radius: 10px; cursor: pointer; font-weight: 600; box-shadow: 0 4px 12px rgba(37,99,235,0.2); transition: all 0.2s; }
-            button:hover { transform: translateY(-2px); box-shadow: 0 6px 16px rgba(37,99,235,0.3); }
-            .back-link { display: inline-block; margin-top: 25px; color: #2563eb; font-weight: 700; text-decoration: none; background: white; padding: 12px 20px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); }
+            .form-card {
+                background: white;
+                padding: 28px;
+                border-radius: 20px;
+                box-shadow: 0 8px 25px rgba(15, 23, 42, 0.05);
+                margin-bottom: 30px;
+                border: 1px solid #e2e8f0;
+            }
+            .form-grid {
+                display: grid;
+                grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+                gap: 18px;
+                align-items: end;
+            }
+            .field label {
+                display: block;
+                font-size: 13px;
+                font-weight: 700;
+                color: #475569;
+                margin-bottom: 8px;
+            }
+            .field select, .field input {
+                width: 100%;
+                padding: 12px 14px;
+                border: 1.5px solid #cbd5e1;
+                border-radius: 12px;
+                background: #f8fafc;
+                font-size: 14px;
+                color: #0f172a;
+                transition: all 0.2s;
+            }
+            .field select:focus, .field input:focus {
+                border-color: #4f46e5;
+                background: #ffffff;
+                outline: none;
+                box-shadow: 0 0 0 4px rgba(79, 70, 229, 0.12);
+            }
         </style>
     </head>
     <body>
-        <h1>🔄 Кітап беру және қайтару</h1>
-        
-        {% if session.get("role") == "librarian" %}
-        <div class="form-box">
-            <h3 style="margin-top:0; color:#1e293b;">+ Жаңа кітап беру</h3>
-            <form method="POST">
-                <label><b>Оқырманды таңдаңыз:</b></label>
-                <select name="okuyman_id" required>
-                    <option value="">-- Таңдаңыз --</option>
-                    {% for r in readers_list %}
-                        <option value="{{ r['id'] }}">{{ r['aty'] }} ({{ r['synyp'] }})</option>
-                    {% endfor %}
-                </select>
+        <div class="page-container">
+            <div class="page-header">
+                <div>
+                    <h1 class="page-title">🔄 Кітап беру және қайтару</h1>
+                    <p class="page-subtitle">Оқырмандарға берілген кітаптарды тіркеу және қайтарылуын бақылау</p>
+                </div>
+                <div class="search-box">
+                    <span class="search-icon">🔍</span>
+                    <input type="text" id="loanSearch" class="search-input" onkeyup="filterTable('loanSearch', 'loanTable')" placeholder="Оқырман немесе кітап атауы...">
+                </div>
+            </div>
+            
+            {% if session.get("role") == "librarian" %}
+            <div class="form-card">
+                <h3 style="margin:0 0 18px 0; color:#0f172a; font-size:18px;">➕ Жаңа кітап беруді рәсімдеу</h3>
+                <form method="POST" class="form-grid">
+                    <div class="field">
+                        <label>Оқырманды таңдаңыз</label>
+                        <select name="okuyman_id" required>
+                            <option value="">-- Оқырманды таңдаңыз --</option>
+                            {% for r in readers_list %}
+                                <option value="{{ r['id'] }}">{{ r['aty'] }} ({{ r['synyp'] }})</option>
+                            {% endfor %}
+                        </select>
+                    </div>
 
-                <label><b>Кітапты таңдаңыз:</b></label>
-                <select name="kitap_id" required>
-                    <option value="">-- Таңдаңыз --</option>
-                    {% for b in books_list %}
-                        <option value="{{ b['id'] }}">{{ b['ataui'] }} (ID: {{ b['kitap_id'] }})</option>
-                    {% endfor %}
-                </select>
+                    <div class="field">
+                        <label>Кітапты таңдаңыз</label>
+                        <select name="kitap_id" required>
+                            <option value="">-- Кітапты таңдаңыз --</option>
+                            {% for b in books_list %}
+                                <option value="{{ b['id'] }}">{{ b['ataui'] }} (ID: {{ b['kitap_id'] }})</option>
+                            {% endfor %}
+                        </select>
+                    </div>
 
-                <label><b>Берілген күні:</b></label>
-                <input type="date" name="kuni" value="{{ today }}">
+                    <div class="field">
+                        <label>Берілген күні</label>
+                        <input type="date" name="kuni" value="{{ today }}">
+                    </div>
 
-                <label><b>Қайтару мерзімі:</b></label>
-                <input type="date" name="merzim" value="{{ default_merzim }}">
+                    <div class="field">
+                        <label>Қайтару мерзімі</label>
+                        <input type="date" name="merzim" value="{{ default_merzim }}">
+                    </div>
 
-                <button type="submit">Кітапты беру</button>
-            </form>
+                    <div class="field">
+                        <button type="submit" class="btn-modern btn-primary" style="width:100%; padding:13px;">📥 Кітапты беру</button>
+                    </div>
+                </form>
+            </div>
+            {% endif %}
+
+            <div class="table-card">
+                <div class="table-responsive">
+                    <table class="modern-table" id="loanTable">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Оқырман</th>
+                                <th>Сыныбы / Пәні</th>
+                                <th>Кітап атауы</th>
+                                <th>Берілген күні</th>
+                                <th>Қайтару мерзімі</th>
+                                <th>Статус</th>
+                                <th>Әрекет</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for l in loans_list %}
+                            <tr>
+                                <td style="color:#64748b; font-weight:600;">#{{ l['id'] }}</td>
+                                <td><b>{{ l['okuyhan_aty'] }}</b></td>
+                                <td><span class="badge badge-info">{{ l['synyp'] }}</span></td>
+                                <td style="font-weight:600;">📖 {{ l['kitap_ataui'] }}</td>
+                                <td>{{ l['kuni'] }}</td>
+                                <td>{{ l['merzim'] }}</td>
+                                <td>
+                                    {% if l['kaitaryldy'] == 'Иә' %}
+                                        <span class="badge badge-success">✅ Қайтарылды</span>
+                                    {% else %}
+                                        <span class="badge badge-danger">⏳ Қолда</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if session.get("role") == "librarian" and l['kaitaryldy'] == 'Жоқ' %}
+                                        <form method="POST" action="/loans/return/{{ l['id'] }}" style="margin:0;">
+                                            <button type="submit" class="btn-modern" style="background:#10b981; color:white; padding:7px 14px; font-size:12.5px;">✓ Қайтару</button>
+                                        </form>
+                                    {% else %}
+                                        <span style="color:#94a3b8; font-size:13px; font-weight:500;">Аяқталды</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% else %}
+                            <tr>
+                                <td colspan="8" style="text-align:center; padding:30px; color:#64748b;">Берілген кітаптар тізімі бос.</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
         </div>
-        {% endif %}
-
-        <h3 style="color:#1e293b;">Берілген кітаптар тізімі</h3>
-        <table>
-            <tr>
-                <th>ID</th>
-                <th>Оқырман</th>
-                <th>Сыныбы / Пәні</th>
-                <th>Кітап атауы</th>
-                <th>Берілген күні</th>
-                <th>Мерзімі</th>
-                <th>Қайтарылды ма?</th>
-                <th>Әрекет</th>
-            </tr>
-            {% for l in loans_list %}
-            <tr>
-                <td>{{ l['id'] }}</td>
-                <td><b>{{ l['okuyhan_aty'] }}</b></td>
-                <td>{{ l['synyp'] }}</td>
-                <td>{{ l['kitap_ataui'] }}</td>
-                <td>{{ l['kuni'] }}</td>
-                <td>{{ l['merzim'] }}</td>
-                <td>
-                    {% if l['kaitaryldy'] == 'Иә' %}
-                        <span style="color:#059669; font-weight:bold;">Иә</span>
-                    {% else %}
-                        <span style="color:#dc2626; font-weight:bold;">Жоқ</span>
-                    {% endif %}
-                </td>
-                <td>
-                    {% if session.get("role") == "librarian" and l['kaitaryldy'] == 'Жоқ' %}
-                        <form method="POST" action="/loans/return/{{ l['id'] }}" style="margin:0;">
-                            <button type="submit" style="background:#10b981; padding:6px 12px; font-size:12px;">Қайтару</button>
-                        </form>
-                    {% else %}
-                        <span style="color:#64748b; font-size:13px;">Аяқталды</span>
-                    {% endif %}
-                </td>
-            </tr>
-            {% else %}
-            <tr>
-                <td colspan="8">Берілген кітаптар жоқ.</td>
-            </tr>
-            {% endfor %}
-        </table>
-        
-        <a class="back-link" href="/">← Басты бетке қайту</a>
     </body>
     </html>
     """,
@@ -876,7 +1373,9 @@ def return_book(loan_id):
     db.close()
     return redirect(url_for("loans"))
 
+# =========================================================
 # ОҚЫРМАНДАР БӨЛІМІ
+# =========================================================
 @app.route("/readers/delete/<int:reader_id>", methods=["POST"])
 def delete_reader(reader_id):
     if not is_librarian():
@@ -970,32 +1469,58 @@ def readers_import():
         <meta name="viewport" content="width=device-width, initial-scale=1">
         <title>Оқырмандарды Excel-ден жүктеу</title>
         <style>
-            body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 600px; margin: 50px auto; padding: 20px; background: #f1f5f9; }
-            .box { background: white; padding: 30px; border-radius: 18px; box-shadow: 0 4px 20px rgba(0,0,0,0.05); border: 1px solid #e2e8f0; }
-            h2 { color: #1e293b; margin-top: 0; }
-            input[type="file"] { margin: 20px 0; padding: 10px; width: 100%; box-sizing: border-box; border: 1px dashed #cbd5e1; border-radius: 10px; background: #f8fafc; }
-            button { width: 100%; padding: 14px; background: #2563eb; color: white; border: 0; border-radius: 12px; cursor: pointer; font-weight: 600; font-size: 15px; box-shadow: 0 4px 12px rgba(37,99,235,0.2); }
-            .message { margin-top: 20px; padding: 12px; background: #eff6ff; color: #1e40af; border-radius: 8px; font-weight: 500; overflow-wrap: anywhere; }
-            ul { color: #475569; }
-            .back-link { display: inline-block; margin-top: 20px; color: #2563eb; font-weight: 700; text-decoration: none; }
+            .import-card {
+                background: white;
+                max-width: 580px;
+                margin: 20px auto;
+                padding: 35px;
+                border-radius: 22px;
+                box-shadow: 0 10px 30px rgba(15, 23, 42, 0.06);
+                border: 1px solid #e2e8f0;
+            }
+            .file-drop {
+                border: 2px dashed #94a3b8;
+                border-radius: 16px;
+                padding: 30px 20px;
+                text-align: center;
+                background: #f8fafc;
+                margin: 20px 0;
+                transition: border-color 0.2s;
+            }
+            .file-drop:hover { border-color: #4f46e5; }
+            .message {
+                margin-top: 20px;
+                padding: 14px 18px;
+                background: #eff6ff;
+                border: 1px solid #bfdbfe;
+                color: #1e40af;
+                border-radius: 12px;
+                font-weight: 600;
+            }
         </style>
     </head>
     <body>
-        <div class="box">
-            <h2>📥 Оқырмандарды Excel-ден жүктеу</h2>
-            <p style="color:#64748b;">Файлда екі баған болуы қажет:</p>
-            <ul>
-                <li><b>Аты-жөні</b></li>
-                <li><b>Сыныбы/пәні</b></li>
-            </ul>
-            <form method="POST" enctype="multipart/form-data">
-                <input type="file" name="file" accept=".xlsx" required>
-                <button type="submit">Файлды жүктеу және сақтау</button>
-            </form>
-            {% if message %}
-                <div class="message">{{ message }}</div>
-            {% endif %}
-            <a class="back-link" href="/readers">← Оқырмандарға қайту</a>
+        <div class="page-container">
+            <div class="import-card">
+                <h2 style="margin-top:0;">📥 Оқырмандарды Excel-ден жүктеу</h2>
+                <p style="color:#64748b; font-size:14.5px;">Жүктелетін <b>.xlsx</b> файлында келесі екі баған болуы қажет:</p>
+                <div style="display:flex; gap:10px; margin-bottom:15px;">
+                    <span class="badge badge-info">Аты-жөні</span>
+                    <span class="badge badge-purple">Сыныбы/пәні</span>
+                </div>
+                <form method="POST" enctype="multipart/form-data">
+                    <div class="file-drop">
+                        <input type="file" name="file" accept=".xlsx" required style="font-size:14px;">
+                    </div>
+                    <button type="submit" class="btn-modern btn-primary" style="width:100%; padding:14px;">🚀 Файлды жүктеу және сақтау</button>
+                </form>
+                {% if message %}
+                    <div class="message">{{ message }}</div>
+                {% endif %}
+                <div style="margin-top:22px;">
+                    <a class="btn-modern btn-outline" href="/readers">← Оқырмандар тізіміне қайту</a>
+                </div>
+            </div>
         </div>
     </body>
     </html>
@@ -1031,65 +1556,103 @@ def readers():
     <html lang="kk">
     <head>
         <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
         <title>Оқырмандар тізімі</title>
         <style>
-            body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; padding: 30px 20px; background: #f1f5f9; max-width: 1100px; margin: auto; }
-            h1 { color: #1e293b; text-align: center; margin-bottom: 25px; }
-            .btn-group { margin-bottom: 25px; display: flex; gap: 12px; flex-wrap: wrap; }
-            .btn { display: inline-block; padding: 12px 20px; background: #2563eb; color: white; text-decoration: none; border-radius: 10px; font-weight: 600; box-shadow: 0 4px 12px rgba(37,99,235,0.2); transition: all 0.2s; }
-            .btn:hover { transform: translateY(-2px); box-shadow: 0 6px 16px rgba(37,99,235,0.3); }
-            .delete-all { background: #dc3545; color: white; border: 0; padding: 12px 20px; border-radius: 10px; cursor: pointer; font-weight: 600; box-shadow: 0 4px 12px rgba(220,53,69,0.2); transition: all 0.2s; }
-            .delete-all:hover { transform: translateY(-2px); box-shadow: 0 6px 16px rgba(220,53,69,0.3); }
-            table { width: 100%; background: white; border-collapse: collapse; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
-            th, td { padding: 14px 12px; border: 1px solid #e2e8f0; text-align: center; }
-            th { background: #2563eb; color: white; font-weight: 600; }
-            tr:nth-child(even) { background: #f8fafc; }
-            .delete-btn { background: #fee2e2; color: #dc2626; border: 0; padding: 6px 14px; border-radius: 8px; cursor: pointer; font-weight: 600; transition: all 0.2s; }
-            .delete-btn:hover { background: #dc2626; color: white; }
-            .back-link { display: inline-block; margin-top: 25px; color: #2563eb; font-weight: 700; text-decoration: none; background: white; padding: 12px 20px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); }
+            .toolbar {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                flex-wrap: wrap;
+                gap: 12px;
+                margin-bottom: 20px;
+            }
+            .delete-btn {
+                background: #fee2e2;
+                color: #dc2626;
+                border: 0;
+                padding: 7px 14px;
+                border-radius: 9px;
+                cursor: pointer;
+                font-weight: 600;
+                font-size: 13px;
+                transition: all 0.2s;
+            }
+            .delete-btn:hover {
+                background: #dc2626;
+                color: white;
+            }
         </style>
     </head>
     <body>
-        <h1>👥 Оқырмандар тізімі</h1>
-        {% if session.get("role") == "librarian" %}
-            <div class="btn-group">
-                <a class="btn" href="/readers/import">📥 Excel-ден жүктеу</a>
-                <form method="POST" action="{{ url_for('reset_readers') }}" style="margin:0;" onsubmit="return confirm('Барлық оқырман мен кітап беру тарихын өшіресіз бе?');">
-                    <button type="submit" class="delete-all">🗑 Барлық оқырманды тазалау</button>
-                </form>
+        <div class="page-container">
+            <div class="page-header">
+                <div>
+                    <h1 class="page-title">👥 Оқырмандар тізімі</h1>
+                    <p class="page-subtitle">Мектеп оқушылары мен мұғалімдерінің тізімі ({{ readers|length }} оқырман)</p>
+                </div>
+                <div class="search-box">
+                    <span class="search-icon">🔍</span>
+                    <input type="text" id="readerSearch" class="search-input" onkeyup="filterTable('readerSearch', 'readerTable')" placeholder="Аты-жөні немесе сыныбы бойынша іздеу...">
+                </div>
             </div>
-        {% endif %}
-        <table>
-            <tr>
-                <th>ID</th>
-                <th>Аты-жөні</th>
-                <th>Сыныбы / Пәні</th>
-                <th>Түрі</th>
-                {% if session.get("role") == "librarian" %}
-                    <th>Әрекет</th>
-                {% endif %}
-            </tr>
-            {% for r in readers %}
-            <tr>
-                <td>{{ r['id'] }}</td>
-                <td><b>{{ r['aty'] }}</b></td>
-                <td>{{ r['synyp'] }}</td>
-                <td>{{ r['turi'] }}</td>
-                {% if session.get("role") == "librarian" %}
-                <td>
-                    <form method="POST" action="/readers/delete/{{ r['id'] }}" style="margin:0;" onsubmit="return confirm('Осы оқырманды өшіресіз бе?');">
-                        <button type="submit" class="delete-btn">Өшіру</button>
+
+            {% if session.get("role") == "librarian" %}
+            <div class="toolbar">
+                <div style="display:flex; gap:12px; flex-wrap:wrap;">
+                    <a class="btn-modern btn-primary" href="/readers/import">📥 Excel-ден жүктеу</a>
+                    <form method="POST" action="{{ url_for('reset_readers') }}" style="margin:0;" onsubmit="return confirm('Барлық оқырман мен кітап беру тарихын өшіресіз бе?');">
+                        <button type="submit" class="btn-modern btn-danger">🗑 Барлығын тазалау</button>
                     </form>
-                </td>
-                {% endif %}
-            </tr>
-            {% else %}
-            <tr>
-                <td colspan="5">Оқырмандар тізімі бос.</td>
-            </tr>
-            {% endfor %}
-        </table>
-        <a class="back-link" href="/">← Басты бетке қайту</a>
+                </div>
+            </div>
+            {% endif %}
+
+            <div class="table-card">
+                <div class="table-responsive">
+                    <table class="modern-table" id="readerTable">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Аты-жөні</th>
+                                <th>Сыныбы / Пәні</th>
+                                <th>Санаты</th>
+                                {% if session.get("role") == "librarian" %}
+                                    <th style="text-align:right;">Әрекет</th>
+                                {% endif %}
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for r in readers %}
+                            <tr>
+                                <td style="color:#64748b; font-weight:600;">#{{ r['id'] }}</td>
+                                <td><b>{{ r['aty'] }}</b></td>
+                                <td>{{ r['synyp'] }}</td>
+                                <td>
+                                    {% if r['turi'] == 'Мұғалім' %}
+                                        <span class="badge badge-purple">👩🏫 Мұғалім</span>
+                                    {% else %}
+                                        <span class="badge badge-info">👨🎓 Оқушы</span>
+                                    {% endif %}
+                                </td>
+                                {% if session.get("role") == "librarian" %}
+                                <td style="text-align:right;">
+                                    <form method="POST" action="/readers/delete/{{ r['id'] }}" style="margin:0;" onsubmit="return confirm('Осы оқырманды өшіресіз бе?');">
+                                        <button type="submit" class="delete-btn">Өшіру</button>
+                                    </form>
+                                </td>
+                                {% endif %}
+                            </tr>
+                            {% else %}
+                            <tr>
+                                <td colspan="5" style="text-align:center; padding:30px; color:#64748b;">Оқырмандар тізімі бос.</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
     </body>
     </html>
     """, readers=readers)
@@ -1119,54 +1682,64 @@ def books():
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1">
         <title>Кітаптар қоры</title>
-        <style>
-            body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; padding: 30px 20px; background: #f1f5f9; max-width: 1200px; margin: auto; }
-            h1 { color: #1e293b; text-align: center; margin-bottom: 25px; }
-            .table-wrap { overflow-x: auto; background: white; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); border: 1px solid #e2e8f0; }
-            table { width: 100%; border-collapse: collapse; }
-            th, td { padding: 14px 12px; border: 1px solid #e2e8f0; text-align: center; font-size: 14px; }
-            th { background: #2563eb; color: white; font-weight: 600; }
-            tr:nth-child(even) { background: #f8fafc; }
-            .back-link { display: inline-block; margin-top: 25px; color: #2563eb; font-weight: 700; text-decoration: none; background: white; padding: 12px 20px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); }
-        </style>
     </head>
     <body>
-        <h1>📚 КІТАПТАР ҚОРЫ</h1>
-        <div class="table-wrap">
-        <table>
-            <tr>
-                <th>ID</th>
-                <th>Кітап ID</th>
-                <th>Атауы</th>
-                <th>Автор</th>
-                <th>Санаты</th>
-                <th>Жалпы саны</th>
-                <th>Берілген</th>
-                <th>Қолда бар</th>
-            </tr>
-            {% for book in books %}
-            <tr>
-                <td>{{ book["id"] }}</td>
-                <td>{{ book["kitap_id"] }}</td>
-                <td><b>{{ book["ataui"] }}</b></td>
-                <td>{{ book["avtor"] }}</td>
-                <td>{{ book["sanat"] }}</td>
-                <td>{{ book["jalpy_sany"] }}</td>
-                <td><span style="color:#d97706; font-weight:bold;">{{ book["berilgen_sany"] }}</span></td>
-                <td><span style="color:#059669; font-weight:bold;">{{ book["korda_bar"] }}</span></td>
-            </tr>
-            {% else %}
-            <tr>
-                <td colspan="8">Кітаптар тізімі бос.</td>
-            </tr>
-            {% endfor %}
-        </table>
+        <div class="page-container">
+            <div class="page-header">
+                <div>
+                    <h1 class="page-title">📚 Кітаптар қоры</h1>
+                    <p class="page-subtitle">Кітапханадағы барлық кітаптар тізімі мен қолжетімді қалдықтар</p>
+                </div>
+                <div class="search-box">
+                    <span class="search-icon">🔍</span>
+                    <input type="text" id="bookSearch" class="search-input" onkeyup="filterTable('bookSearch', 'bookTable')" placeholder="Кітап атауы, авторы немесе ID...">
+                </div>
+            </div>
+
+            <div class="table-card">
+                <div class="table-responsive">
+                    <table class="modern-table" id="bookTable">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Кітап коды</th>
+                                <th>Кітап атауы</th>
+                                <th>Авторы</th>
+                                <th>Санаты</th>
+                                <th>Жалпы саны</th>
+                                <th>Берілгені</th>
+                                <th>Қорда бар</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for book in books %}
+                            <tr>
+                                <td style="color:#64748b;">#{{ book["id"] }}</td>
+                                <td><span class="badge badge-info">{{ book["kitap_id"] }}</span></td>
+                                <td><b>{{ book["ataui"] }}</b></td>
+                                <td>{{ book["avtor"] or '—' }}</td>
+                                <td>{{ book["sanat"] or '—' }}</td>
+                                <td style="font-weight:700;">{{ book["jalpy_sany"] }}</td>
+                                <td><span class="badge badge-warning">{{ book["berilgen_sany"] }}</span></td>
+                                <td><span class="badge badge-success">{{ book["korda_bar"] }}</span></td>
+                            </tr>
+                            {% else %}
+                            <tr>
+                                <td colspan="8" style="text-align:center; padding:30px; color:#64748b;">Кітаптар тізімі бос.</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
         </div>
-        <a class="back-link" href="/">← Басты бетке қайту</a>
     </body>
     </html>
     """, books=books)
-    
+
+# =========================================================
+# РЕЙТИНГТЕР (ОҚУШЫЛАР, МҰҒАЛІМДЕР, КІТАПТАР)
+# =========================================================
 @app.route("/rating")
 def rating():
     if not is_logged_in():
@@ -1184,31 +1757,60 @@ def rating():
     rows = cursor.fetchall()
     db.close()
     
-    html = """
+    return render_template_string("""
+    <!DOCTYPE html>
     <html lang="kk">
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Оқушылар рейтингісі</title>
-    <body style="font-family:'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin:30px auto; max-width:1100px; background:#f1f5f9; padding:20px;">
-    <h1 style="color:#1e293b; text-align:center;">ОҚУШЫЛАР РЕЙТИНГІСІ</h1>
-    <p style="color:#64748b; text-align:center;">Кітап алу саны бойынша рейтинг</p>
-    <a href="/" style="display:inline-block; margin-bottom:20px; color:#2563eb; font-weight:700; text-decoration:none; background:white; padding:12px 20px; border-radius:10px; box-shadow:0 2px 10px rgba(0,0,0,0.05);">← Басты бетке қайту</a>
-    <table border="1" cellpadding="12" cellspacing="0" style="border-collapse:collapse; width:100%; background:white; border-radius:12px; overflow:hidden; box-shadow:0 4px 15px rgba(0,0,0,0.05); border:1px solid #e2e8f0;">
-    <tr style="background:#2563eb; color:white;"><th>Орын</th><th>Оқушының аты-жөні</th><th>Сыныбы</th><th>Кітап алу саны</th></tr>
-    """
-    for i, row in enumerate(rows, 1):
-        bg = "#f8fafc" if i % 2 == 0 else "white"
-        if i == 1:
-            pos_display = "🥇 1"
-        elif i == 2:
-            pos_display = "🥈 2"
-        elif i == 3:
-            pos_display = "🥉 3"
-        else:
-            pos_display = str(i)
-        html += f"<tr style='background:{bg}; text-align:center;'><td>{pos_display}</td><td style='text-align:left; padding-left:20px;'><b>{row['aty']}</b></td><td>{row['synyp'] or ''}</td><td><span style='color:#2563eb; font-weight:bold;'>{row['kitap_sany']}</span></td></tr>"
-    html += "</table></body></html>"
-    return html
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <title>Оқушылар рейтингісі</title>
+    </head>
+    <body>
+        <div class="page-container">
+            <div class="page-header">
+                <div>
+                    <h1 class="page-title">👨🎓 Оқушылар рейтингісі</h1>
+                    <p class="page-subtitle">Кітап алу белсенділігі бойынша үздік оқушылар тізімі</p>
+                </div>
+                <div class="search-box">
+                    <span class="search-icon">🔍</span>
+                    <input type="text" id="stRateSearch" class="search-input" onkeyup="filterTable('stRateSearch', 'stRateTable')" placeholder="Оқушыны іздеу...">
+                </div>
+            </div>
+
+            <div class="table-card">
+                <div class="table-responsive">
+                    <table class="modern-table" id="stRateTable">
+                        <thead>
+                            <tr>
+                                <th style="width:90px;">Орын</th>
+                                <th>Оқушының аты-жөні</th>
+                                <th>Сыныбы</th>
+                                <th>Алған кітап саны</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for row in rows %}
+                            <tr>
+                                <td style="font-weight:800; font-size:16px;">
+                                    {% if loop.index == 1 %}🥇 1
+                                    {% elif loop.index == 2 %}🥈 2
+                                    {% elif loop.index == 3 %}🥉 3
+                                    {% else %}{{ loop.index }}{% endif %}
+                                </td>
+                                <td><b>{{ row['aty'] }}</b></td>
+                                <td><span class="badge badge-info">{{ row['synyp'] or '—' }}</span></td>
+                                <td><span class="badge badge-success" style="font-size:14px;">📚 {{ row['kitap_sany'] }} кітап</span></td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </body>
+    </html>
+    """, rows=rows)
 
 @app.route("/teacher-rating")
 def teacher_rating():
@@ -1227,31 +1829,60 @@ def teacher_rating():
     rows = cursor.fetchall()
     db.close()
     
-    html = """
+    return render_template_string("""
+    <!DOCTYPE html>
     <html lang="kk">
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Мұғалімдер рейтингісі</title>
-    <body style="font-family:'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin:30px auto; max-width:1100px; background:#f1f5f9; padding:20px;">
-    <h1 style="color:#1e293b; text-align:center;">МҰҒАЛІМДЕР РЕЙТИНГІСІ</h1>
-    <p style="color:#64748b; text-align:center;">Кітап алу саны бойынша рейтинг</p>
-    <a href="/" style="display:inline-block; margin-bottom:20px; color:#2563eb; font-weight:700; text-decoration:none; background:white; padding:12px 20px; border-radius:10px; box-shadow:0 2px 10px rgba(0,0,0,0.05);">← Басты бетке қайту</a>
-    <table border="1" cellpadding="12" cellspacing="0" style="border-collapse:collapse; width:100%; background:white; border-radius:12px; overflow:hidden; box-shadow:0 4px 15px rgba(0,0,0,0.05); border:1px solid #e2e8f0;">
-    <tr style="background:#2563eb; color:white;"><th>Орын</th><th>Мұғалімнің аты-жөні</th><th>Пәні</th><th>Кітап алу саны</th></tr>
-    """
-    for i, row in enumerate(rows, 1):
-        bg = "#f8fafc" if i % 2 == 0 else "white"
-        if i == 1:
-            pos_display = "🥇 1"
-        elif i == 2:
-            pos_display = "🥈 2"
-        elif i == 3:
-            pos_display = "🥉 3"
-        else:
-            pos_display = str(i)
-        html += f"<tr style='background:{bg}; text-align:center;'><td>{pos_display}</td><td style='text-align:left; padding-left:20px;'><b>{row['aty']}</b></td><td>{row['synyp'] or ''}</td><td><span style='color:#2563eb; font-weight:bold;'>{row['kitap_sany']}</span></td></tr>"
-    html += "</table></body></html>"
-    return html
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <title>Мұғалімдер рейтингісі</title>
+    </head>
+    <body>
+        <div class="page-container">
+            <div class="page-header">
+                <div>
+                    <h1 class="page-title">👩🏫 Мұғалімдер рейтингісі</h1>
+                    <p class="page-subtitle">Кітап алу белсенділігі бойынша ұстаздар рейтингі</p>
+                </div>
+                <div class="search-box">
+                    <span class="search-icon">🔍</span>
+                    <input type="text" id="tcRateSearch" class="search-input" onkeyup="filterTable('tcRateSearch', 'tcRateTable')" placeholder="Мұғалімді іздеу...">
+                </div>
+            </div>
+
+            <div class="table-card">
+                <div class="table-responsive">
+                    <table class="modern-table" id="tcRateTable">
+                        <thead>
+                            <tr>
+                                <th style="width:90px;">Орын</th>
+                                <th>Мұғалімнің аты-жөні</th>
+                                <th>Пәні / Қызметі</th>
+                                <th>Алған кітап саны</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for row in rows %}
+                            <tr>
+                                <td style="font-weight:800; font-size:16px;">
+                                    {% if loop.index == 1 %}🥇 1
+                                    {% elif loop.index == 2 %}🥈 2
+                                    {% elif loop.index == 3 %}🥉 3
+                                    {% else %}{{ loop.index }}{% endif %}
+                                </td>
+                                <td><b>{{ row['aty'] }}</b></td>
+                                <td><span class="badge badge-purple">{{ row['synyp'] or '—' }}</span></td>
+                                <td><span class="badge badge-success" style="font-size:14px;">📚 {{ row['kitap_sany'] }} кітап</span></td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </body>
+    </html>
+    """, rows=rows)
 
 @app.route("/book-rating")
 def book_rating():
@@ -1269,31 +1900,62 @@ def book_rating():
     rows = cursor.fetchall()
     db.close()
     
-    html = """
+    return render_template_string("""
+    <!DOCTYPE html>
     <html lang="kk">
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Кітаптар рейтингісі</title>
-    <body style="font-family:'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin:30px auto; max-width:1100px; background:#f1f5f9; padding:20px;">
-    <h1 style="color:#1e293b; text-align:center;">КІТАПТАР РЕЙТИНГІСІ</h1>
-    <p style="color:#64748b; text-align:center;">Ең көп алынған кітаптар тізімі</p>
-    <a href="/" style="display:inline-block; margin-bottom:20px; color:#2563eb; font-weight:700; text-decoration:none; background:white; padding:12px 20px; border-radius:10px; box-shadow:0 2px 10px rgba(0,0,0,0.05);">← Басты бетке қайту</a>
-    <table border="1" cellpadding="12" cellspacing="0" style="border-collapse:collapse; width:100%; background:white; border-radius:12px; overflow:hidden; box-shadow:0 4px 15px rgba(0,0,0,0.05); border:1px solid #e2e8f0;">
-    <tr style="background:#2563eb; color:white;"><th>Орын</th><th>Кітап ID</th><th>Кітап атауы</th><th>Авторы</th><th>Алу саны</th></tr>
-    """
-    for i, row in enumerate(rows, 1):
-        bg = "#f8fafc" if i % 2 == 0 else "white"
-        if i == 1:
-            pos_display = "🥇 1"
-        elif i == 2:
-            pos_display = "🥈 2"
-        elif i == 3:
-            pos_display = "🥉 3"
-        else:
-            pos_display = str(i)
-        html += f"<tr style='background:{bg}; text-align:center;'><td>{pos_display}</td><td>{row['kitap_id']}</td><td style='text-align:left; padding-left:20px;'><b>{row['ataui']}</b></td><td>{row['avtor'] or ''}</td><td><span style='color:#2563eb; font-weight:bold;'>{row['alu_sany']}</span></td></tr>"
-    html += "</table></body></html>"
-    return html
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <title>Кітаптар рейтингісі</title>
+    </head>
+    <body>
+        <div class="page-container">
+            <div class="page-header">
+                <div>
+                    <h1 class="page-title">🥇 Кітаптар рейтингісі</h1>
+                    <p class="page-subtitle">Оқырмандар арасында ең көп сұранысқа ие кітаптар</p>
+                </div>
+                <div class="search-box">
+                    <span class="search-icon">🔍</span>
+                    <input type="text" id="bkRateSearch" class="search-input" onkeyup="filterTable('bkRateSearch', 'bkRateTable')" placeholder="Кітапты іздеу...">
+                </div>
+            </div>
+
+            <div class="table-card">
+                <div class="table-responsive">
+                    <table class="modern-table" id="bkRateTable">
+                        <thead>
+                            <tr>
+                                <th style="width:90px;">Орын</th>
+                                <th>Кітап ID</th>
+                                <th>Кітап атауы</th>
+                                <th>Авторы</th>
+                                <th>Алынған саны</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for row in rows %}
+                            <tr>
+                                <td style="font-weight:800; font-size:16px;">
+                                    {% if loop.index == 1 %}🥇 1
+                                    {% elif loop.index == 2 %}🥈 2
+                                    {% elif loop.index == 3 %}🥉 3
+                                    {% else %}{{ loop.index }}{% endif %}
+                                </td>
+                                <td><span class="badge badge-info">{{ row['kitap_id'] }}</span></td>
+                                <td><b>{{ row['ataui'] }}</b></td>
+                                <td>{{ row['avtor'] or '—' }}</td>
+                                <td><span class="badge badge-success" style="font-size:14px;">🔥 {{ row['alu_sany'] }} рет</span></td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </body>
+    </html>
+    """, rows=rows)
 
 if __name__ == '__main__':
     init_db()
