@@ -688,7 +688,7 @@ def login():
         <div class="blob-2"></div>
         <div class="login-card">
             <div class="logo-circle">📚</div>
-            <h2>Мектеп кітапханасы</h2>
+            <h2>Мектеп кітапханасын</h2>
             <p class="sub">Цифрлық басқару жүйесіне қош келдіңіз</p>
             {% if error %}
                 <div class="error">⚠️ {{ error }}</div>
