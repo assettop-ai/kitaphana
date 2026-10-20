@@ -624,32 +624,37 @@ def home():
                 color: #dc2626;
             }
             .menu {
-                display: grid;
-                grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
-                gap: 18px;
-            }
-            .button {
                 display: flex;
-                align-items: center;
+                flex-wrap: wrap;
                 justify-content: center;
-                padding: 20px;
-                background: rgba(255, 255, 255, 0.92);
-                backdrop-filter: blur(8px);
-                border-radius: 16px;
-                text-decoration: none;
-                color: #1e293b;
-                font-size: 16px;
-                font-weight: 700;
-                border: 1px solid rgba(255, 255, 255, 0.5);
-                box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
-                transition: all 0.3s ease;
+                align-items: center;
+                gap: 12px 28px;
+                padding: 20px 10px;
+                background: rgba(255, 255, 255, 0.88);
+                border-radius: 12px;
             }
+            
+            .button {
+                display: inline-block;
+                padding: 4px 0;
+                background: transparent;
+                border: none;
+                box-shadow: none;
+                border-radius: 0;
+                text-decoration: none;
+                color: #1e40af;
+                font-size: 16px;
+                font-weight: 600;
+                transition: color 0.2s ease;
+            }
+            
             .button:hover {
-                background: #2563eb;
-                color: #ffffff;
-                border-color: #2563eb;
-                transform: translateY(-4px);
-                box-shadow: 0 10px 25px rgba(37, 99, 235, 0.4);
+                background: transparent;
+                color: #dc2626;
+                border: none;
+                box-shadow: none;
+                transform: none;
+                text-decoration: underline;
             }
         </style>
     </head>
