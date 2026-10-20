@@ -906,7 +906,7 @@ def home():
                 <div class="hero-content">
                     <img src="/static/emblem.png" onerror="this.style.display='none'" alt="Эмблема" class="header-logo">
                     <div class="hero-text">
-                        <h1>МЕКТЕП КІТАПХАНАСЫ БАСҚАРУ ЖҮЙЕСІ</h1>
+                        <h1>МЕКТЕП КІТАПХАНАСЫН БАСҚАРУ ЖҮЙЕСІ</h1>
                         <p>Кітап қорын, оқырмандарды және кітап айналымын автоматтандырылған бақылау панелі</p>
                     </div>
                 </div>
